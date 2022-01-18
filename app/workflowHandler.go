@@ -49,3 +49,23 @@ func (u WorkflowHandler) AllWorkflows(w http.ResponseWriter, r *http.Request) {
 		WriteResponse(w, http.StatusOK, components)
 	}
 }
+
+func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
+	workflow_name := r.URL.Query().Get("name")
+
+	fmt.Println(workflow_name)
+	type responseBody struct {
+		WorkflowResponse string `json:"workflow_response"`
+	}
+	_, err := u.service.RunWorkflow(workflow_name)
+	if err != nil {
+		fmt.Println("Inside error" + err.Message)
+
+		WriteResponse(w, err.Code, err.AsMessage())
+	} else {
+
+		respondWithJSON(w, 200, responseBody{
+			WorkflowResponse: "workflow:" + workflow_name + " is triggered!",
+		})
+	}
+}

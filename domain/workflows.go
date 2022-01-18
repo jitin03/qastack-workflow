@@ -11,10 +11,18 @@ type Workflow struct {
 	Project_Id  string `db:"project_id"`
 	Created_By  int    `db:"created_by"`
 	Config      []struct {
-		Name       string `db:"name"`
-		Repository string `db:"repository"`
-		Branch     string `db:"branch"`
-		Git_Token  string `db:"token"`
+		Name         string   `db:"name"`
+		Repository   string   `db:"repository"`
+		Branch       string   `db:"branch"`
+		Git_Token    string   `db:"token"`
+		DockerImage  string   `db:"docker_image"`
+		EntryPath    []string `db:"entrypath"`
+		Dependencies []string `db:"dependencies"`
+		Parameters   []struct {
+			Name  string `db:"name"`
+			Value string `db:"value"`
+		}
+		Source string `db:"input_command"`
 	} `db:"config"`
 }
 
@@ -33,6 +41,7 @@ type Step_Config struct {
 type WorkflowRepository interface {
 	AddWorkflow(workflow Workflow) (*Workflow, *errs.AppError)
 	AllWorkflows(projectKey string, pageId int) ([]Workflow, *errs.AppError)
+	RunWorkflow(workflowId string) (string, *errs.AppError)
 }
 
 func (w Workflow) ToAddWorkflowResponseDto() *dto.AddWorkflowResponse {
@@ -45,4 +54,60 @@ func (t Workflow) ToDto() dto.AllWorkflowResponse {
 		Project_Id:  t.Project_Id,
 		Created_By:  t.Created_By,
 	}
+}
+
+type GenerateTemplate struct {
+	WorkflowTemplate WorkflowTemplate `json:"workflow"`
+}
+
+type WorkflowTemplate struct {
+	APIVersion string   `json:"apiVersion"`
+	Kind       string   `json:"kind"`
+	Metadata   Metadata `json:"metadata"`
+	Spec       Spec     `json:"spec"`
+}
+
+type Metadata struct {
+	GenerateName string `json:"generateName"`
+}
+
+type Spec struct {
+	Entrypoint string      `json:"entrypoint"`
+	Templates  []Templates `json:"templates"`
+	Arguments  *Arguments  `json:"arguments",omitempty"`
+}
+
+type Arguments struct {
+	Parameters []Parameters `json:"parameters"`
+}
+
+type Parameters struct {
+	Name  string `json:"name",omitempty"`
+	Value string `json:"value",omitempty"`
+}
+type Script struct {
+	Image   string   `json:"image"`
+	Command []string `json:"command"`
+	Source  string   `json:"source"`
+}
+
+type Templates struct {
+	Name   string  `json:"name"`
+	Dag    *Dag    `json:"dag,omitempty"`
+	Inputs *Inputs `json:"inputs"`
+	Script *Script `json:"script,omitempty"`
+}
+
+type Inputs struct {
+	Parameters []Parameters `json:"parameters"`
+}
+type Dag struct {
+	Tasks []Tasks `json:"tasks"`
+}
+
+type Tasks struct {
+	Name         string     `json:"name"`
+	Arguments    *Arguments `json:"arguments",omitempty`
+	Template     string     `json:"template"`
+	Dependencies []string   `json:"dependencies,omitempty"`
 }

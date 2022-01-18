@@ -51,25 +51,62 @@ func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.A
 	workflow.Workflow_Id = id
 	logrus.Info(id)
 
-	if err != nil {
-		logger.Error("Error while creating new workflow: " + err.Error())
-		return nil, errs.NewUnexpectedError("Unexpected error from database")
-	}
-	workflow.Workflow_Id = id
+	// if err != nil {
+	// 	logger.Error("Error while creating new workflow: " + err.Error())
+	// 	return nil, errs.NewUnexpectedError("Unexpected error from database")
+	// }
+	// workflow.Workflow_Id = id
 
 	for index, d := range workflow.Config {
 		fmt.Println(index, d)
 		x := d.Name
 		fmt.Println(x)
 
-		sqlTestStepInsert := "INSERT INTO workflow_steps (workflow_id,name, repository,branch,token) values ($1, $2,$3,$4,$5) RETURNING id"
+		entrypoint := make([]string, 0)
+		dependencies := make([]string, 0)
 
-		_, err := tx.Exec(sqlTestStepInsert, id, d.Name, d.Repository, d.Branch, d.Git_Token)
+		entrypoint = append(entrypoint, d.EntryPath...)
+
+		dependencies = append(dependencies, d.Dependencies...)
+
+		dependencies_as_string, _ := json.Marshal(dependencies)
+		entrypoint_as_string, _ := json.Marshal(entrypoint)
+		fmt.Println(string(dependencies_as_string))
+		fmt.Println(string(entrypoint_as_string))
+
+		sqlWorkflowStepInsert := "INSERT INTO workflow_steps (workflow_id,name, repository,branch,token,docker_image,entrypath,dependencies,input_command) values ($1, $2,$3,$4,$5,$6,$7,$8,$9) RETURNING id"
+
+		_, err := tx.Exec(sqlWorkflowStepInsert, id, d.Name, d.Repository, d.Branch, d.Git_Token, d.DockerImage, entrypoint_as_string, dependencies_as_string, d.Source)
 		if err != nil {
 			tx.Rollback()
-			logger.Error("Error while saving transaction into workflow: " + err.Error())
+			logger.Error("Error while saving transaction into workflow step: " + err.Error())
 			return nil, errs.NewUnexpectedError("Unexpected database error")
 		}
+
+		for _, p := range d.Parameters {
+
+			var param_id string
+
+			// Run a query to get new workflow id
+			stepParamRow := tx.QueryRow("SELECT id FROM public.workflow_steps WHERE name=$1 and workflow_id = $2", d.Name, id)
+			err = stepParamRow.Scan(&param_id)
+
+			if err != nil {
+				tx.Rollback()
+				logger.Error("Error while getting workflow id : " + err.Error())
+				return nil, errs.NewUnexpectedError("Unexpected database error")
+			}
+
+			sqlWorkflowStepParamInsert := "INSERT INTO workflow_steps_param (workflow_step_id,name, value) values ($1, $2,$3) RETURNING id"
+
+			_, err := tx.Exec(sqlWorkflowStepParamInsert, param_id, p.Name, p.Value)
+			if err != nil {
+				tx.Rollback()
+				logger.Error("Error while saving transaction into workflow: " + err.Error())
+				return nil, errs.NewUnexpectedError("Unexpected database error")
+			}
+		}
+
 	}
 
 	// commit the transaction when all is good
@@ -95,6 +132,97 @@ func (d WorkflowRepositoryDb) AllWorkflows(projectKey string, pageId int) ([]Wor
 	}
 
 	return workflows, nil
+
+}
+
+func (d WorkflowRepositoryDb) RunWorkflow(workflowId string) (string, *errs.AppError) {
+
+	commands := []string{"python"}
+
+	dependencies := []string{"Task1"}
+
+	script := Script{
+		Image:   "python:3.8-slim",
+		Command: commands,
+		Source:  "print('Task executed.')",
+	}
+
+	parameters := []Parameters{}
+
+	parameter1 := Parameters{
+		Name:  "Param1",
+		Value: "ParamValue1",
+	}
+
+	parameters = append(parameters, parameter1)
+
+	argument := Arguments{
+		Parameters: parameters,
+	}
+
+	task := []Tasks{}
+	t1 := Tasks{Name: "Task1", Template: "task-template", Arguments: &argument}
+	t2 := Tasks{Name: "Task2", Template: "task-template", Dependencies: dependencies, Arguments: &argument}
+	task = append(task, t1)
+	task = append(task, t2)
+
+	tasks := task
+
+	dag := Dag{
+		Tasks: tasks,
+	}
+
+	templates := []Templates{}
+
+	inputs := Inputs{
+		Parameters: parameters,
+	}
+
+	template1 := Templates{
+		Name:   "dag-template",
+		Dag:    &dag,
+		Inputs: &inputs,
+	}
+
+	template2 := Templates{
+		Name:   "task-template",
+		Script: &script,
+		Inputs: &inputs,
+	}
+
+	templates = append(templates, template1)
+	templates = append(templates, template2)
+
+	spec := Spec{
+		Entrypoint: "dag-template",
+		Templates:  templates,
+		Arguments:  &argument,
+	}
+
+	metadata := Metadata{
+		GenerateName: "wf-dag-template-",
+	}
+
+	workflow := &WorkflowTemplate{
+		APIVersion: "argoproj.io/v1alpha1",
+		Kind:       "Workflow",
+		Metadata:   metadata,
+		Spec:       spec,
+	}
+
+	generateTemplate := &GenerateTemplate{
+		WorkflowTemplate: *workflow,
+	}
+	data, _ := json.MarshalIndent(generateTemplate, "", "  ")
+	// data is the JSON string represented as bytes
+	// the second parameter here is the error, which we
+	// are ignoring for now, but which you should ideally handle
+	// in production grade code
+
+	// to print the data, we can typecast it to a string
+	fmt.Println(string(data))
+
+	return string(data), nil
 }
 
 func NewWorkflowRepositoryDb(dbClient *sqlx.DB) WorkflowRepositoryDb {

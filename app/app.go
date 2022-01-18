@@ -73,6 +73,8 @@ func Start() {
 		HandleFunc("/api/workflows", w.AllWorkflows).
 		Methods(http.MethodGet).Name("AllWorkflows")
 
+	router.HandleFunc("/api/workflow/run", w.RunWorkflow).Methods(http.MethodPost).Name("RunWorkflow")
+
 	cor := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization", "Referer"},
