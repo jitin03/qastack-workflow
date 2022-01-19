@@ -3,27 +3,31 @@ package domain
 import (
 	"qastack-workflows/dto"
 	"qastack-workflows/errs"
+
+	"github.com/jmoiron/sqlx/types"
 )
 
 type Workflow struct {
-	Workflow_Id string `db:"id"`
-	Name        string `db:"name"`
-	Project_Id  string `db:"project_id"`
-	Created_By  int    `db:"created_by"`
-	Config      []struct {
-		Name         string   `db:"name"`
-		Repository   string   `db:"repository"`
-		Branch       string   `db:"branch"`
-		Git_Token    string   `db:"token"`
-		DockerImage  string   `db:"docker_image"`
-		EntryPath    []string `db:"entrypath"`
-		Dependencies []string `db:"dependencies"`
-		Parameters   []struct {
-			Name  string `db:"name"`
-			Value string `db:"value"`
-		}
-		Source string `db:"input_command"`
-	} `db:"config"`
+	Workflow_Id string         `db:"id"`
+	Name        string         `db:"name"`
+	Project_Id  string         `db:"project_id"`
+	Created_By  int            `db:"created_by"`
+	Config      types.JSONText `db:"config"`
+}
+
+type Config struct {
+	Name       string   `json:"name"`
+	Git_Token  string   `json:"token"`
+	Branch     string   `json:"branch"`
+	EntryPath  []string `json:"entrypath"`
+	Parameters []struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+	}
+	Repository   string   `json:"repository"`
+	Dependencies []string `json:"dependencies"`
+	DockerImage  string   `json:"docker_image"`
+	Source       string   `json:"input_command"`
 }
 
 type Steps struct {

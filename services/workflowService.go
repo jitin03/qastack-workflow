@@ -37,21 +37,25 @@ func (s DefaultWorkflowService) AllWorkflows(componentId string, pageId int) ([]
 
 func (s DefaultWorkflowService) RunWorkflow(id string) (string, *errs.AppError) {
 	// api/v1/workflows/argo
-	url := "https://af8df61718f35408fbaf3f28bdec0b1d-1414162024.us-east-1.elb.amazonaws.com:2746/api/v1/workflows/argo"
+	url := "https://aaad6cf83a017465982ad22ec5d00891-194263979.us-east-1.elb.amazonaws.com:2746/api/v1/workflows/argo"
 	method := "POST"
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	template, err := s.repo.RunWorkflow(id)
+	if err != nil {
+		logger.Info("err in run workflow")
+		return "Error in template generation", err
+	}
 
 	r := strings.NewReader(template)
 	client := &http.Client{}
-	req, _ := http.NewRequest(method, url, r)
+	req, argoErr := http.NewRequest(method, url, r)
 
-	if err != nil {
+	res, argoErr := client.Do(req)
+	if argoErr != nil {
 		logger.Info("err in run workflow")
-
+		return "", errs.NewUnexpectedError("Unexpected from cluster")
 	}
-	res, _ := client.Do(req)
 
 	defer res.Body.Close()
 
@@ -64,25 +68,14 @@ func (s DefaultWorkflowService) RunWorkflow(id string) (string, *errs.AppError) 
 
 func (s DefaultWorkflowService) AddWorkflow(req dto.AddWorkflowRequest) (*dto.AddWorkflowResponse, *errs.AppError) {
 
+	config := req.Config
+
 	c := domain.Workflow{
 
 		Name:       req.Name,
 		Project_Id: req.Project_id,
 		Created_By: req.Created_By,
-		Config: []struct {
-			Name         string   `db:"name"`
-			Repository   string   `db:"repository"`
-			Branch       string   `db:"branch"`
-			Git_Token    string   `db:"token"`
-			DockerImage  string   `db:"docker_image"`
-			EntryPath    []string `db:"entrypath"`
-			Dependencies []string `db:"dependencies"`
-			Parameters   []struct {
-				Name  string `db:"name"`
-				Value string `db:"value"`
-			}
-			Source string `db:"input_command"`
-		}(req.Config),
+		Config:     config,
 	}
 
 	if newComponent, err := s.repo.AddWorkflow(c); err != nil {

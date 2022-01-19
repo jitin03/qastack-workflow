@@ -51,13 +51,13 @@ func (u WorkflowHandler) AllWorkflows(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
-	workflow_name := r.URL.Query().Get("name")
+	workflowId := r.URL.Query().Get("id")
 
-	fmt.Println(workflow_name)
+	fmt.Println(workflowId)
 	type responseBody struct {
 		WorkflowResponse string `json:"workflow_response"`
 	}
-	_, err := u.service.RunWorkflow(workflow_name)
+	_, err := u.service.RunWorkflow(workflowId)
 	if err != nil {
 		fmt.Println("Inside error" + err.Message)
 
@@ -65,7 +65,7 @@ func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
 	} else {
 
 		respondWithJSON(w, 200, responseBody{
-			WorkflowResponse: "workflow:" + workflow_name + " is triggered!",
+			WorkflowResponse: "workflow:" + workflowId + " is triggered!",
 		})
 	}
 }
