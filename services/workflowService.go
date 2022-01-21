@@ -11,12 +11,16 @@ import (
 	"qastack-workflows/errs"
 	logger "qastack-workflows/loggers"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type WorkflowServices interface {
 	AddWorkflow(request dto.AddWorkflowRequest) (*dto.AddWorkflowResponse, *errs.AppError)
 	AllWorkflows(projectKey string, pageId int) ([]dto.AllWorkflowResponse, *errs.AppError)
-	RunWorkflow(string) (string, *errs.AppError)
+	RunWorkflow(string) *errs.AppError
+	RetryRunWorkflow(string) *errs.AppError
+	DeleteWorkflow(id string) *errs.AppError
 }
 
 type DefaultWorkflowService struct {
@@ -36,7 +40,17 @@ func (s DefaultWorkflowService) AllWorkflows(componentId string, pageId int) ([]
 	return response, err
 }
 
-func (s DefaultWorkflowService) RunWorkflow(id string) (string, *errs.AppError) {
+func (s DefaultWorkflowService) DeleteWorkflow(id string) *errs.AppError {
+
+	err := s.repo.DeleteWorkflow(id)
+	if err != nil {
+		return errs.NewUnexpectedError("Unexpected error in delete action")
+	}
+
+	return nil
+}
+
+func (s DefaultWorkflowService) RunWorkflow(id string) *errs.AppError {
 	// api/v1/workflows/argo
 	url := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo"
 	method := "POST"
@@ -46,7 +60,7 @@ func (s DefaultWorkflowService) RunWorkflow(id string) (string, *errs.AppError) 
 	if err != nil {
 		logger.Info("err in run workflow")
 
-		return "", errs.NewUnexpectedError("Unexpected from cluster")
+		return errs.NewUnexpectedError("Unexpected from cluster")
 	}
 
 	r := strings.NewReader(template)
@@ -56,16 +70,53 @@ func (s DefaultWorkflowService) RunWorkflow(id string) (string, *errs.AppError) 
 	res, argoErr := client.Do(req)
 	if argoErr != nil {
 		logger.Info("err in run workflow")
-		return "", errs.NewUnexpectedError("Unexpected from cluster")
+		return errs.NewUnexpectedError("Unexpected from cluster")
 	}
 
 	defer res.Body.Close()
 
-	body, _ := ioutil.ReadAll(res.Body)
+	body, bodyerr := ioutil.ReadAll(res.Body)
 
+	if bodyerr != nil {
+		logger.Info("err in run workflow")
+		return errs.NewUnexpectedError("Unexpected from cluster")
+	}
+	logger.Info("ass")
 	fmt.Println(string(body))
-	return string(body), nil
+	if res.StatusCode == 409 {
+		return errs.NewUnexpectedError("Workflow name has already triggered ")
+	}
 
+	return nil
+
+}
+
+func (s DefaultWorkflowService) RetryRunWorkflow(name string) *errs.AppError {
+	url := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo/" + name + "/retry"
+	method := "PUT"
+
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+
+	if err != nil {
+		log.Info(err)
+		return errs.NewUnexpectedError("Unexpected from cluster")
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		log.Info(err)
+		return errs.NewUnexpectedError("Unexpected from cluster")
+	}
+	defer res.Body.Close()
+
+	_, Readerr := ioutil.ReadAll(res.Body)
+	if Readerr != nil {
+		log.Info(err)
+		return errs.NewUnexpectedError("Unexpected from cluster")
+	}
+
+	return nil
 }
 
 func (s DefaultWorkflowService) AddWorkflow(req dto.AddWorkflowRequest) (*dto.AddWorkflowResponse, *errs.AppError) {

@@ -75,6 +75,12 @@ func Start() {
 
 	router.HandleFunc("/api/workflow/run", w.RunWorkflow).Methods(http.MethodPost).Name("RunWorkflow")
 
+	router.
+		HandleFunc("/api/workflow/delete/{workflowName}", w.DeleteWorkflow).
+		Methods(http.MethodDelete).Name("DeleteWorkflow")
+
+	router.HandleFunc("/api/workflow/retry", w.RetryRunWorkflow).Methods(http.MethodPut).Name("RetryRunWorkflow")
+
 	router.HandleFunc("/api/workflow/event-stream/", w.SubscribeToEvent).Methods(http.MethodGet).Name("SubscribeToEvent")
 
 	cor := cors.New(cors.Options{

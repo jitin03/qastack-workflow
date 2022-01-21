@@ -10,6 +10,7 @@ import (
 	"qastack-workflows/services"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/r3labs/sse"
 	log "github.com/sirupsen/logrus"
 )
@@ -55,14 +56,54 @@ func (u WorkflowHandler) AllWorkflows(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (u WorkflowHandler) DeleteWorkflow(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	// convert the id type from string to int
+	id := params["workflowName"]
+	type responseBody struct {
+		WorkflowResponse string `json:"message"`
+	}
+	error := u.service.DeleteWorkflow(id)
+	if error != nil {
+		fmt.Println("Inside error" + error.Message)
+
+		WriteResponse(w, error.Code, error.AsMessage())
+	} else {
+		respondWithJSON(w, 200, responseBody{
+			WorkflowResponse: "workflow:" + id + " is deleted successfully!",
+		})
+	}
+
+}
+
 func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
-	workflowId := r.URL.Query().Get("id")
+	workflowId := r.URL.Query().Get("workflowName")
 
 	fmt.Println(workflowId)
 	type responseBody struct {
 		WorkflowResponse string `json:"workflow_response"`
 	}
-	_, err := u.service.RunWorkflow(workflowId)
+	err := u.service.RunWorkflow(workflowId)
+	if err != nil {
+		fmt.Println("Inside error" + err.Message)
+
+		WriteResponse(w, err.Code, err.AsMessage())
+	} else {
+
+		respondWithJSON(w, 200, responseBody{
+			WorkflowResponse: "workflow:" + workflowId + " is triggered!",
+		})
+	}
+}
+
+func (u WorkflowHandler) RetryRunWorkflow(w http.ResponseWriter, r *http.Request) {
+	workflowId := r.URL.Query().Get("workflowName")
+
+	fmt.Println(workflowId)
+	type responseBody struct {
+		WorkflowResponse string `json:"workflow_response"`
+	}
+	err := u.service.RetryRunWorkflow(workflowId)
 	if err != nil {
 		fmt.Println("Inside error" + err.Message)
 

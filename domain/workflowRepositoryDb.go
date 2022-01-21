@@ -122,11 +122,27 @@ func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.A
 	return &workflow, nil
 }
 
+func (w WorkflowRepositoryDb) DeleteWorkflow(id string) *errs.AppError {
+	log.Info(id)
+	deleteSql := "DELETE FROM workflows WHERE workflowname = $1"
+	res, err := w.client.Exec(deleteSql, id)
+	if err != nil {
+		panic(err)
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(count)
+
+	return nil
+}
+
 func (d WorkflowRepositoryDb) AllWorkflows(projectKey string, pageId int) ([]Workflow, *errs.AppError) {
 	var err error
 	workflows := make([]Workflow, 0)
 	logrus.Info(projectKey)
-	findAllSql := "select id,name, project_id,created_by from public.workflows where project_id=$1 LIMIT $2"
+	findAllSql := "select id,workflowname, project_id,created_by from public.workflows where project_id=$1 LIMIT $2"
 	err = d.client.Select(&workflows, findAllSql, projectKey, pageId)
 
 	if err != nil {
@@ -147,7 +163,7 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string) (string, *errs.AppE
 	templates := []Templates{}
 
 	//"select id,title,description,type,priority from testcase where component_id=$1 LIMIT $2"
-	findAllSql := "select id,workflowname,project_id,created_by,config from public.workflows w where id=$1"
+	findAllSql := "select id,workflowname,project_id,created_by,config from public.workflows w where workflowname=$1"
 	err = d.client.Select(&workflow, findAllSql, workflowId)
 
 	log.Info(" from table", string(workflow[0].Config))
