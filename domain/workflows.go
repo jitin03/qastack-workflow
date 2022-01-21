@@ -9,7 +9,7 @@ import (
 
 type Workflow struct {
 	Workflow_Id string         `db:"id"`
-	Name        string         `db:"name"`
+	Name        string         `db:"workflowname"`
 	Project_Id  string         `db:"project_id"`
 	Created_By  int            `db:"created_by"`
 	Config      types.JSONText `db:"config"`

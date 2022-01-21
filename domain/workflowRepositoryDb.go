@@ -29,7 +29,7 @@ func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.A
 		return nil, errs.NewUnexpectedError("Unexpected database error")
 	}
 
-	sqlInsert := "INSERT INTO public.workflows (name, project_id,created_by,config) values ($1, $2, $3,$4) RETURNING id"
+	sqlInsert := "INSERT INTO public.workflows (workflowname, project_id,created_by,config) values ($1, $2, $3,$4) RETURNING id"
 
 	_, err = tx.Exec(sqlInsert, workflow.Name, workflow.Project_Id, workflow.Created_By, workflow.Config)
 
@@ -41,7 +41,7 @@ func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.A
 	}
 
 	// Run a query to get new workflow id
-	row := tx.QueryRow("SELECT id FROM public.workflows WHERE name=$1", workflow.Name)
+	row := tx.QueryRow("SELECT id FROM public.workflows WHERE workflowname=$1", workflow.Name)
 	var id string
 	// Store the count in the `catCount` variable
 	err = row.Scan(&id)
@@ -147,7 +147,7 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string) (string, *errs.AppE
 	templates := []Templates{}
 
 	//"select id,title,description,type,priority from testcase where component_id=$1 LIMIT $2"
-	findAllSql := "select id,name,project_id,created_by,config from public.workflows w where id=$1"
+	findAllSql := "select id,workflowname,project_id,created_by,config from public.workflows w where workflowname=$1"
 	err = d.client.Select(&workflow, findAllSql, workflowId)
 
 	log.Info(" from table", string(workflow[0].Config))

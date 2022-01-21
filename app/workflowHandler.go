@@ -56,8 +56,9 @@ func (u WorkflowHandler) AllWorkflows(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
-	workflowId := r.URL.Query().Get("id")
+	workflowId := r.URL.Query().Get("workflowName")
 
+	log.Info("asdasdasd", workflowId)
 	fmt.Println(workflowId)
 	type responseBody struct {
 		WorkflowResponse string `json:"workflow_response"`
