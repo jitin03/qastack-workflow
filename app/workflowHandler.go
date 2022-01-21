@@ -76,7 +76,7 @@ func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u WorkflowHandler) SubscribeToEvent(w http.ResponseWriter, r *http.Request) {
-	workflowName := r.URL.Query().Get("id")
+	workflowName := r.URL.Query().Get("workflowName")
 	fmt.Println("hello Event")
 
 	events := make(chan *sse.Event)
