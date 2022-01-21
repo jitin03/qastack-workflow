@@ -147,7 +147,7 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string) (string, *errs.AppE
 	templates := []Templates{}
 
 	//"select id,title,description,type,priority from testcase where component_id=$1 LIMIT $2"
-	findAllSql := "select id,workflowname,project_id,created_by,config from public.workflows w where workflowname=$1"
+	findAllSql := "select id,workflowname,project_id,created_by,config from public.workflows w where id=$1"
 	err = d.client.Select(&workflow, findAllSql, workflowId)
 
 	log.Info(" from table", string(workflow[0].Config))
