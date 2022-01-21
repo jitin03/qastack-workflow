@@ -75,6 +75,8 @@ func Start() {
 
 	router.HandleFunc("/api/workflow/run", w.RunWorkflow).Methods(http.MethodPost).Name("RunWorkflow")
 
+	router.HandleFunc("/api/workflow/event-stream/", w.SubscribeToEvent).Methods(http.MethodGet).Name("SubscribeToEvent")
+
 	cor := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization", "Referer"},

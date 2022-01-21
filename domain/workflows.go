@@ -72,7 +72,7 @@ type WorkflowTemplate struct {
 }
 
 type Metadata struct {
-	GenerateName string `json:"generateName"`
+	GenerateName string `json:"name"`
 }
 
 type Spec struct {

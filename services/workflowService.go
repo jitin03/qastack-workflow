@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"qastack-workflows/domain"
 	"qastack-workflows/dto"
 	"qastack-workflows/errs"
@@ -37,14 +38,15 @@ func (s DefaultWorkflowService) AllWorkflows(componentId string, pageId int) ([]
 
 func (s DefaultWorkflowService) RunWorkflow(id string) (string, *errs.AppError) {
 	// api/v1/workflows/argo
-	url := "https://aaad6cf83a017465982ad22ec5d00891-194263979.us-east-1.elb.amazonaws.com:2746/api/v1/workflows/argo"
+	url := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo"
 	method := "POST"
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	template, err := s.repo.RunWorkflow(id)
 	if err != nil {
 		logger.Info("err in run workflow")
-		return "Error in template generation", err
+
+		return "", errs.NewUnexpectedError("Unexpected from cluster")
 	}
 
 	r := strings.NewReader(template)

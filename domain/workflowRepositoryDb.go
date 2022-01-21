@@ -250,7 +250,7 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string) (string, *errs.AppE
 	}
 
 	metadata := Metadata{
-		GenerateName: "wf-dag-template-",
+		GenerateName: workflow[0].Name,
 	}
 
 	workflowTemplate := &WorkflowTemplate{
