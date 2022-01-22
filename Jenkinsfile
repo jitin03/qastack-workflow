@@ -14,6 +14,7 @@ pipeline {
         DB_PORT = 5432
         DB_NAME = 'postgres'
         DB_USER = 'postgres'
+        AUTH_SERVER='34.201.1.56'
         ARGO_SERVER_ENDPOINT='a973a7c68601640278113fe98be8a89d-49052598.us-east-1.elb.amazonaws.com'
     }
     stages {
@@ -43,7 +44,7 @@ pipeline {
             sh 'docker build -t stack-workflow .'
             sh 'docker image list'
             sh 'docker tag stack-workflow mehuljitin/stack-workflow:stack-workflow'
-            sh 'docker run -d -e DB_USER=$DB_USER -e ARGO_SERVER_ENDPOINT=$ARGO_SERVER_ENDPOINT -e DB_PASSWD=$DB_PASSWD -e DB_ADDR=$DB_ADDR -e DB_NAME=$DB_NAME -p 8094:8094 stack-workflow'
+            sh 'docker run -d -e AUTH_SERVER=$AUTH_SERVER -e DB_USER=$DB_USER -e ARGO_SERVER_ENDPOINT=$ARGO_SERVER_ENDPOINT -e DB_PASSWD=$DB_PASSWD -e DB_ADDR=$DB_ADDR -e DB_NAME=$DB_NAME -p 8094:8094 stack-workflow'
             }
         }
 
