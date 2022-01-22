@@ -85,7 +85,7 @@ func Start() {
 
 	router.HandleFunc("/api/workflow/retry", w.RetryRunWorkflow).Methods(http.MethodPut).Name("RetryRunWorkflow")
 
-	router.HandleFunc("/api/workflow/event-stream/", w.SubscribeToEvent).Methods(http.MethodGet).Name("SubscribeToEvent")
+	router.HandleFunc("/api/workflow/event-stream", w.SubscribeToEvent).Methods(http.MethodGet).Name("SubscribeToEvent")
 
 	cor := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
