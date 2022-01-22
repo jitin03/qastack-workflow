@@ -20,7 +20,7 @@ pipeline {
          stage("Git Clone"){
              steps{
                 cleanWs()
-                git credentialsId: 'GIT_HUB_CREDS', url: 'https://github.com/qastack-ai/qastack-workflow'
+                git credentialsId: 'GIT_HUB_CREDS', url: 'https://github.com/jitin03/qastack-workflow.git'
              }
          }
         stage('Pre Test') {
