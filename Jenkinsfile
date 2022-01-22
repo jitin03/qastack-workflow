@@ -39,11 +39,11 @@ pipeline {
         }
         stage("Docker build"){
             steps{
-            sh 'docker version'
-            sh 'docker build -t stack-workflow .'
-            sh 'docker image list'
-            sh 'docker tag stack-workflow mehuljitin/stack-workflow:stack-workflow'
-            sh 'docker run -d -e DB_USER=$DB_USER -e ARGO_SERVER_ENDPOINT=$ARGO_SERVER_ENDPOINT -e DB_PASSWD=$DB_PASSWD -e DB_ADDR=$DB_ADDR -e DB_NAME=$DB_NAME -p 8094:8094 stack-workflow'
+            sh 'sudo docker version'
+            sh 'sudo docker build -t stack-workflow .'
+            sh 'sudo docker image list'
+            sh 'sudo docker tag stack-workflow mehuljitin/stack-workflow:stack-workflow'
+            sh 'sudo docker run -d -e DB_USER=$DB_USER -e ARGO_SERVER_ENDPOINT=$ARGO_SERVER_ENDPOINT -e DB_PASSWD=$DB_PASSWD -e DB_ADDR=$DB_ADDR -e DB_NAME=$DB_NAME -p 8094:8094 stack-workflow'
             }
         }
 
@@ -53,9 +53,9 @@ pipeline {
         steps{
             script{
                  withCredentials([string(credentialsId: 'DOCKER_HUB_CREDS', variable: 'PASSWORD')]) {
-        sh 'docker login -u mehuljitin -p $PASSWORD'
+        sh 'sudo docker login -u mehuljitin -p $PASSWORD'
                  }
-            sh 'docker push  mehuljitin/stack-workflow:stack-workflow'
+            sh 'sudo docker push  mehuljitin/stack-workflow:stack-workflow'
             }
         }
     }
