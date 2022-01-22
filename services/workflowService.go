@@ -21,10 +21,22 @@ type WorkflowServices interface {
 	RunWorkflow(string) *errs.AppError
 	RetryRunWorkflow(string) *errs.AppError
 	DeleteWorkflow(id string) *errs.AppError
+	GetWorkflowDetail(string) (*dto.AllWorkflowResponse, *errs.AppError)
 }
 
 type DefaultWorkflowService struct {
 	repo domain.WorkflowRepository
+}
+
+func (s DefaultWorkflowService) GetWorkflowDetail(workflowName string) (*dto.AllWorkflowResponse, *errs.AppError) {
+
+	workflow, err := s.repo.GetWorkflowDetail(workflowName)
+	if err != nil {
+		return nil, err
+	}
+
+	response := workflow.ToDto()
+	return &response, err
 }
 
 func (s DefaultWorkflowService) AllWorkflows(componentId string, pageId int) ([]dto.AllWorkflowResponse, *errs.AppError) {

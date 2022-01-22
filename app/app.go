@@ -79,6 +79,10 @@ func Start() {
 		HandleFunc("/api/workflow/delete/{workflowName}", w.DeleteWorkflow).
 		Methods(http.MethodDelete).Name("DeleteWorkflow")
 
+	router.
+		HandleFunc("/api/workflow/{workflowName}", w.GetWorkflowDetail).
+		Methods(http.MethodGet).Name("GetWorkflowDetail")
+
 	router.HandleFunc("/api/workflow/retry", w.RetryRunWorkflow).Methods(http.MethodPut).Name("RetryRunWorkflow")
 
 	router.HandleFunc("/api/workflow/event-stream/", w.SubscribeToEvent).Methods(http.MethodGet).Name("SubscribeToEvent")

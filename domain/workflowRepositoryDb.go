@@ -138,6 +138,22 @@ func (w WorkflowRepositoryDb) DeleteWorkflow(id string) *errs.AppError {
 	return nil
 }
 
+func (d WorkflowRepositoryDb) GetWorkflowDetail(workflowName string) (*Workflow, *errs.AppError) {
+	var err error
+	var workflow Workflow
+	logrus.Info(workflowName)
+	findAllSql := "select id,workflowname,config from public.workflows where workflowname=$1"
+	err = d.client.Get(&workflow, findAllSql, workflowName)
+
+	if err != nil {
+		fmt.Println("Error while querying component table " + err.Error())
+		return nil, errs.NewUnexpectedError("Unexpected database error")
+	}
+
+	return &workflow, nil
+
+}
+
 func (d WorkflowRepositoryDb) AllWorkflows(projectKey string, pageId int) ([]Workflow, *errs.AppError) {
 	var err error
 	workflows := make([]Workflow, 0)

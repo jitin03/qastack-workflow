@@ -76,6 +76,23 @@ func (u WorkflowHandler) DeleteWorkflow(w http.ResponseWriter, r *http.Request) 
 
 }
 
+func (u WorkflowHandler) GetWorkflowDetail(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	// convert the id type from string to int
+	id := params["workflowName"]
+	type responseBody struct {
+		WorkflowResponse string `json:"message"`
+	}
+	workflow, error := u.service.GetWorkflowDetail(id)
+	if error != nil {
+		fmt.Println("Inside error" + error.Message)
+
+		WriteResponse(w, error.Code, error.AsMessage())
+	} else {
+		WriteResponse(w, http.StatusOK, workflow)
+	}
+}
+
 func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
 	workflowId := r.URL.Query().Get("workflowName")
 

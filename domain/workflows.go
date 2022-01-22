@@ -47,6 +47,7 @@ type WorkflowRepository interface {
 	AllWorkflows(projectKey string, pageId int) ([]Workflow, *errs.AppError)
 	RunWorkflow(workflowId string) (string, *errs.AppError)
 	DeleteWorkflow(id string) *errs.AppError
+	GetWorkflowDetail(string) (*Workflow, *errs.AppError)
 }
 
 func (w Workflow) ToAddWorkflowResponseDto() *dto.AddWorkflowResponse {
@@ -58,6 +59,7 @@ func (t Workflow) ToDto() dto.AllWorkflowResponse {
 		Name:        t.Name,
 		Project_Id:  t.Project_Id,
 		Created_By:  t.Created_By,
+		Config:      t.Config,
 	}
 }
 
