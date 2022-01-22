@@ -17,12 +17,12 @@ pipeline {
         ARGO_SERVER_ENDPOINT='a973a7c68601640278113fe98be8a89d-49052598.us-east-1.elb.amazonaws.com'
     }
     stages {
-         stage("Git Clone"){
-             steps{
-                cleanWs()
-                git credentialsId: 'GIT_HUB_CREDS', url: 'https://github.com/jitin03/qastack-workflow.git'
-             }
-         }
+        //  stage("Git Clone"){
+        //      steps{
+        //         cleanWs()
+        //         git credentialsId: 'GIT_HUB_CREDS', url: 'https://github.com/jitin03/qastack-workflow.git'
+        //      }
+        //  }
         stage('Pre Test') {
             steps {
                 echo 'Installing dependencies'
