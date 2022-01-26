@@ -146,7 +146,7 @@ func (d WorkflowRepositoryDb) GetWorkflowDetail(workflowName string) (*Workflow,
 	err = d.client.Get(&workflow, findAllSql, workflowName)
 
 	if err != nil {
-		fmt.Println("Error while querying component table " + err.Error())
+		fmt.Println("Error while querying workflow table table " + err.Error())
 		return nil, errs.NewUnexpectedError("Unexpected database error")
 	}
 
@@ -162,7 +162,7 @@ func (d WorkflowRepositoryDb) AllWorkflows(projectKey string, pageId int) ([]Wor
 	err = d.client.Select(&workflows, findAllSql, projectKey, pageId)
 
 	if err != nil {
-		fmt.Println("Error while querying component table " + err.Error())
+		fmt.Println("Error while querying workflow table " + err.Error())
 		return nil, errs.NewUnexpectedError("Unexpected database error")
 	}
 

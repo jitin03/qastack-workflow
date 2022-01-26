@@ -161,7 +161,7 @@ func (u WorkflowHandler) SubscribeToEvent(w http.ResponseWriter, r *http.Request
 	d := make(chan interface{})
 	defer close(d)
 	defer fmt.Println("Closing channel.")
-	eventURI := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflow-events/argo?listOptions.fieldSelector=metadata.name=" + workflowName
+	eventURI := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflow-events/argo?listOptions.fieldSelector=metadata.namespace=argo,metadata.name=" + workflowName
 	log.Info(eventURI)
 	client := sse.NewClient(eventURI)
 	client.Connection.Transport = &http.Transport{
