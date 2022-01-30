@@ -11,9 +11,12 @@ import (
 	"qastack-workflows/errs"
 	logger "qastack-workflows/loggers"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
+
+const dbTSLayout = "2006-01-02 15:04:05"
 
 type WorkflowServices interface {
 	AddWorkflow(request dto.AddWorkflowRequest) (*dto.AddWorkflowResponse, *errs.AppError)
@@ -39,9 +42,9 @@ func (s DefaultWorkflowService) GetWorkflowDetail(workflowName string) (*dto.All
 	return &response, err
 }
 
-func (s DefaultWorkflowService) AllWorkflows(componentId string, pageId int) ([]dto.AllWorkflowResponse, *errs.AppError) {
+func (s DefaultWorkflowService) AllWorkflows(projectKey string, pageId int) ([]dto.AllWorkflowResponse, *errs.AppError) {
 
-	workflows, err := s.repo.AllWorkflows(componentId, pageId)
+	workflows, err := s.repo.AllWorkflows(projectKey, pageId)
 	if err != nil {
 		return nil, err
 	}
@@ -137,10 +140,11 @@ func (s DefaultWorkflowService) AddWorkflow(req dto.AddWorkflowRequest) (*dto.Ad
 
 	c := domain.Workflow{
 
-		Name:       req.Name,
-		Project_Id: req.Project_id,
-		Created_By: req.Created_By,
-		Config:     config,
+		Name:        req.Name,
+		Project_Id:  req.Project_id,
+		Created_By:  req.Created_By,
+		Config:      config,
+		CreatedDate: time.Now().Format(dbTSLayout),
 	}
 
 	if newComponent, err := s.repo.AddWorkflow(c); err != nil {

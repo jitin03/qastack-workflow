@@ -21,36 +21,18 @@ type WorkflowRepositoryDb struct {
 func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.AppError) {
 
 	log.Info(workflow.Config)
-	// starting the database transaction block
-	tx, err := w.client.Begin()
 
-	if err != nil {
-		logger.Error("Error while starting a new transaction for workflow table transaction: " + err.Error())
-		return nil, errs.NewUnexpectedError("Unexpected database error")
-	}
+	var id string
+	sqlInsert := "INSERT INTO public.workflows (workflowname, project_id,created_by,config,created_date) values ($1, $2, $3,$4,$5) RETURNING id"
 
-	sqlInsert := "INSERT INTO public.workflows (workflowname, project_id,created_by,config) values ($1, $2, $3,$4) RETURNING id"
-
-	_, err = tx.Exec(sqlInsert, workflow.Name, workflow.Project_Id, workflow.Created_By, workflow.Config)
+	err := w.client.QueryRow(sqlInsert, workflow.Name, workflow.Project_Id, workflow.Created_By, workflow.Config, workflow.CreatedDate).Scan(&id)
 
 	// in case of error Rollback, and changes from both the tables will be reverted
 	if err != nil {
-		tx.Rollback()
-		logger.Error("Error while saving transaction into workflow: " + err.Error())
-		return nil, errs.NewUnexpectedError("Unexpected database error")
+		logger.Error("Error while creating new component: " + err.Error())
+		return nil, errs.NewUnexpectedError("Unexpected error from database")
 	}
 
-	// Run a query to get new workflow id
-	row := tx.QueryRow("SELECT id FROM public.workflows WHERE workflowname=$1", workflow.Name)
-	var id string
-	// Store the count in the `catCount` variable
-	err = row.Scan(&id)
-
-	if err != nil {
-		tx.Rollback()
-		logger.Error("Error while getting workflow id : " + err.Error())
-		return nil, errs.NewUnexpectedError("Unexpected database error")
-	}
 	workflow.Workflow_Id = id
 	logrus.Info(id)
 
@@ -112,13 +94,6 @@ func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.A
 
 	// }
 
-	// commit the transaction when all is good
-	err = tx.Commit()
-	if err != nil {
-		tx.Rollback()
-		logger.Error("Error while commiting transaction for workflow: " + err.Error())
-		return nil, errs.NewUnexpectedError("Unexpected database error")
-	}
 	return &workflow, nil
 }
 
@@ -213,14 +188,15 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string) (string, *errs.AppE
 			commands = append(commands, entrypath)
 
 		}
+
 		// commands := []string{"python"}
 		// dependencies := []string{"Task1"}
-
+		source := c.Source + "\n" + "git clone -b " + c.Branch + " https://" + c.Git_Token + ":x-oauth-basic@github.com/jitin03/qastack-fe.git"
 		log.Info("c.DockerImage", c.DockerImage)
 		script = Script{
 			Image:   c.DockerImage,
 			Command: commands,
-			Source:  c.Source,
+			Source:  source,
 		}
 
 		parameters := []Parameters{}

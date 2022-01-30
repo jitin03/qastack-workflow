@@ -13,6 +13,7 @@ type Workflow struct {
 	Project_Id  string         `db:"project_id"`
 	Created_By  int            `db:"created_by"`
 	Config      types.JSONText `db:"config"`
+	CreatedDate string         `db:"created_date"`
 }
 
 type Config struct {

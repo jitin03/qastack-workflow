@@ -194,7 +194,7 @@ func (u WorkflowHandler) SubscribeToEvent(w http.ResponseWriter, r *http.Request
 
 			// fmt.Printf("data: %v ", *data)
 			// fmt.Fprintf(w, "data: %v \n\n", data)
-			fmt.Fprintf(w, "data:%s \n", data.Data)
+			fmt.Fprintf(w, "data:%s \n\n", data.Data)
 			flusher.Flush()
 		}
 	}
