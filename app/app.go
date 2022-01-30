@@ -76,7 +76,7 @@ func Start() {
 	router.HandleFunc("/api/workflow/run", w.RunWorkflow).Methods(http.MethodPost).Name("RunWorkflow")
 
 	router.
-		HandleFunc("/api/workflow/delete/{workflowName}", w.DeleteWorkflow).
+		HandleFunc("/api/workflow/delete/{id}", w.DeleteWorkflow).
 		Methods(http.MethodDelete).Name("DeleteWorkflow")
 
 	router.

@@ -59,7 +59,7 @@ func (u WorkflowHandler) AllWorkflows(w http.ResponseWriter, r *http.Request) {
 func (u WorkflowHandler) DeleteWorkflow(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	// convert the id type from string to int
-	id := params["workflowName"]
+	id := params["id"]
 	type responseBody struct {
 		WorkflowResponse string `json:"message"`
 	}

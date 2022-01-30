@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"qastack-workflows/errs"
 	logger "qastack-workflows/loggers"
 
@@ -99,7 +100,7 @@ func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.A
 
 func (w WorkflowRepositoryDb) DeleteWorkflow(id string) *errs.AppError {
 	log.Info(id)
-	deleteSql := "DELETE FROM workflows WHERE workflowname = $1"
+	deleteSql := "DELETE FROM workflows WHERE id = $1"
 	res, err := w.client.Exec(deleteSql, id)
 	if err != nil {
 		panic(err)
@@ -191,7 +192,18 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string) (string, *errs.AppE
 
 		// commands := []string{"python"}
 		// dependencies := []string{"Task1"}
-		source := c.Source + "\n" + "git clone -b " + c.Branch + " https://" + c.Git_Token + ":x-oauth-basic@github.com/jitin03/qastack-fe.git"
+
+		gitRepo, err := url.Parse(c.Repository)
+		if err != nil {
+			return "Error", errs.NewUnexpectedError("Unexpected repository parsing error")
+		}
+
+		// dnsPing := fmt.Sprint("set -e;\n sh -c 'echo "%s+" | tee /etc/resolv.conf > /dev/null';","nameserver 8.8.8.8\nnameserver 8.8.4.4\nnameserver 1.1.1.1\noptions attempts:5 timeout:2 rotate")
+
+		res := fmt.Sprintf("https://%s:x-oauth-basic@github.com%s", "token", gitRepo.Path)
+		// dns_ping := "set -e;\n sh -c 'echo 'nameserver 8.8.8.8\nnameserver 8.8.4.4\nnameserver 1.1.1.1\noptions attempts:5 timeout:2 rotate' | tee /etc/resolv.conf > /dev/null'"
+		source := "\ngit clone -b " + c.Branch + " " + res + ";\n" + c.Source
+
 		log.Info("c.DockerImage", c.DockerImage)
 		script = Script{
 			Image:   c.DockerImage,
