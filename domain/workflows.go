@@ -50,6 +50,7 @@ type WorkflowRepository interface {
 	AllWorkflows(projectKey string, pageId int) ([]Workflow, *errs.AppError)
 	RunWorkflow(workflowId string, userId string) (string, *errs.AppError)
 	UpdateWorkflowRun(workflowName string, status string, lastExecutedDate string, triggeredBy string) (string *errs.AppError)
+	UpdateReSubmitedWorkflowRun(workflowName string, newWorkflowname string, status string, lastExecutedDate string, triggeredBy string) (string *errs.AppError)
 	DeleteWorkflow(id string) *errs.AppError
 	GetWorkflowDetail(string) (*Workflow, *errs.AppError)
 }

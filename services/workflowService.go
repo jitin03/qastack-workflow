@@ -2,6 +2,7 @@ package services
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -23,6 +24,7 @@ type WorkflowServices interface {
 	AllWorkflows(projectKey string, pageId int) ([]dto.AllWorkflowResponse, *errs.AppError)
 	RunWorkflow(string, userId string) *errs.AppError
 	RetryRunWorkflow(string) *errs.AppError
+	ReSubmitRunWorkflow(string, userId string) *errs.AppError
 	DeleteWorkflow(id string) *errs.AppError
 	GetWorkflowDetail(string) (*dto.AllWorkflowResponse, *errs.AppError)
 }
@@ -143,6 +145,37 @@ func (s DefaultWorkflowService) RetryRunWorkflow(name string) *errs.AppError {
 	return nil
 }
 
+func (s DefaultWorkflowService) ReSubmitRunWorkflow(name string, userId string) *errs.AppError {
+	url := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo/" + name + "/resubmit"
+	method := "PUT"
+
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+
+	res, _ := client.Do(req)
+
+	defer res.Body.Close()
+
+	response, Readerr := ioutil.ReadAll(res.Body)
+	if Readerr != nil {
+		log.Info(err)
+		return errs.NewUnexpectedError("Unexpected from cluster")
+	}
+	var resubmitWorkflow dto.ReSubmitResponse
+	json.Unmarshal([]byte(response), &resubmitWorkflow)
+	fmt.Printf("Species: %s, Description: %s", resubmitWorkflow.Metadata.Name)
+	newWorkflowname := resubmitWorkflow.Metadata.Name
+	status := "Resubmitted"
+	lastExecutedDate := time.Now().Format(dbTSLayout)
+	triggeredBy := userId
+	if err := s.repo.UpdateReSubmitedWorkflowRun(name, newWorkflowname, status, lastExecutedDate, triggeredBy); err != nil {
+		logger.Info("err in run workflow")
+		return errs.NewUnexpectedError("Unexpected from UpdateReSubmitedWorkflowRun")
+	}
+
+	return nil
+}
 func (s DefaultWorkflowService) AddWorkflow(req dto.AddWorkflowRequest) (*dto.AddWorkflowResponse, *errs.AppError) {
 
 	config := req.Config

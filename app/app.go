@@ -84,6 +84,7 @@ func Start() {
 		Methods(http.MethodGet).Name("GetWorkflowDetail")
 
 	router.HandleFunc("/api/workflow/retry", w.RetryRunWorkflow).Methods(http.MethodPut).Name("RetryRunWorkflow")
+	router.HandleFunc("/api/workflow/resubmit", w.ReSubmitRunWorkflow).Methods(http.MethodPut).Name("ReSubmitRunWorkflow")
 
 	router.HandleFunc("/api/event/workflow", w.SubscribeToEvent).Methods(http.MethodGet).Name("SubscribeToEvent")
 

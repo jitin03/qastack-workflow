@@ -94,7 +94,7 @@ func (u WorkflowHandler) GetWorkflowDetail(w http.ResponseWriter, r *http.Reques
 }
 
 func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
-	workflowName := r.URL.Query().Get("workflowName")
+	workflowName := r.URL.Query().Get("id")
 	userId := r.URL.Query().Get("userId")
 
 	fmt.Println(workflowName)
@@ -122,6 +122,27 @@ func (u WorkflowHandler) RetryRunWorkflow(w http.ResponseWriter, r *http.Request
 		WorkflowResponse string `json:"workflow_response"`
 	}
 	err := u.service.RetryRunWorkflow(workflowId)
+	if err != nil {
+		fmt.Println("Inside error" + err.Message)
+
+		WriteResponse(w, err.Code, err.AsMessage())
+	} else {
+
+		respondWithJSON(w, 200, responseBody{
+			WorkflowResponse: "workflow:" + workflowId + " is triggered!",
+		})
+	}
+}
+
+func (u WorkflowHandler) ReSubmitRunWorkflow(w http.ResponseWriter, r *http.Request) {
+	workflowId := r.URL.Query().Get("workflowName")
+	userId := r.URL.Query().Get("userId")
+
+	fmt.Println(workflowId)
+	type responseBody struct {
+		WorkflowResponse string `json:"workflow_response"`
+	}
+	err := u.service.ReSubmitRunWorkflow(workflowId, userId)
 	if err != nil {
 		fmt.Println("Inside error" + err.Message)
 
