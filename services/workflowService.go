@@ -21,7 +21,7 @@ const dbTSLayout = "2006-01-02 15:04:05"
 type WorkflowServices interface {
 	AddWorkflow(request dto.AddWorkflowRequest) (*dto.AddWorkflowResponse, *errs.AppError)
 	AllWorkflows(projectKey string, pageId int) ([]dto.AllWorkflowResponse, *errs.AppError)
-	RunWorkflow(string) *errs.AppError
+	RunWorkflow(string, userId string) *errs.AppError
 	RetryRunWorkflow(string) *errs.AppError
 	DeleteWorkflow(id string) *errs.AppError
 	GetWorkflowDetail(string) (*dto.AllWorkflowResponse, *errs.AppError)
@@ -65,13 +65,13 @@ func (s DefaultWorkflowService) DeleteWorkflow(id string) *errs.AppError {
 	return nil
 }
 
-func (s DefaultWorkflowService) RunWorkflow(id string) *errs.AppError {
-	// api/v1/workflows/argo
+func (s DefaultWorkflowService) RunWorkflow(id string, userId string) *errs.AppError {
+
 	url := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo"
 	method := "POST"
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
-	template, err := s.repo.RunWorkflow(id)
+	template, err := s.repo.RunWorkflow(id, userId)
 	if err != nil {
 		logger.Info("err in run workflow")
 
@@ -100,6 +100,15 @@ func (s DefaultWorkflowService) RunWorkflow(id string) *errs.AppError {
 	fmt.Println(string(body))
 	if res.StatusCode == 409 {
 		return errs.NewUnexpectedError("Workflow name has already triggered ")
+	} else {
+		status := "Running"
+		lastExecutedDate := time.Now().Format(dbTSLayout)
+		triggeredBy := userId
+		err := s.repo.UpdateWorkflowRun(id, status, lastExecutedDate, triggeredBy)
+		if err != nil {
+			logger.Info("err in run workflow")
+			return errs.NewUnexpectedError("Unexpected from UpdateWorkflowRun")
+		}
 	}
 
 	return nil
@@ -140,11 +149,12 @@ func (s DefaultWorkflowService) AddWorkflow(req dto.AddWorkflowRequest) (*dto.Ad
 
 	c := domain.Workflow{
 
-		Name:        req.Name,
-		Project_Id:  req.Project_id,
-		Created_By:  req.Created_By,
-		Config:      config,
-		CreatedDate: time.Now().Format(dbTSLayout),
+		Name:           req.Name,
+		Project_Id:     req.Project_id,
+		Created_By:     req.Created_By,
+		Config:         config,
+		CreatedDate:    time.Now().Format(dbTSLayout),
+		WorkflowStatus: "Unexecuted",
 	}
 
 	if newComponent, err := s.repo.AddWorkflow(c); err != nil {

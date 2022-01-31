@@ -44,7 +44,7 @@ func (u WorkflowHandler) AllWorkflows(w http.ResponseWriter, r *http.Request) {
 
 	pageId, _ := strconv.Atoi(page)
 	// projectKeyId, _ := strconv.Atoi(projectKey)
-	components, err := u.service.AllWorkflows(projectKey, pageId)
+	workflows, err := u.service.AllWorkflows(projectKey, pageId)
 
 	if err != nil {
 		fmt.Println("Inside error" + err.Message)
@@ -52,7 +52,7 @@ func (u WorkflowHandler) AllWorkflows(w http.ResponseWriter, r *http.Request) {
 		WriteResponse(w, err.Code, err.AsMessage())
 	} else {
 
-		WriteResponse(w, http.StatusOK, components)
+		WriteResponse(w, http.StatusOK, workflows)
 	}
 }
 
@@ -94,13 +94,14 @@ func (u WorkflowHandler) GetWorkflowDetail(w http.ResponseWriter, r *http.Reques
 }
 
 func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
-	workflowId := r.URL.Query().Get("workflowName")
+	workflowName := r.URL.Query().Get("workflowName")
+	userId := r.URL.Query().Get("userId")
 
-	fmt.Println(workflowId)
+	fmt.Println(workflowName)
 	type responseBody struct {
 		WorkflowResponse string `json:"workflow_response"`
 	}
-	err := u.service.RunWorkflow(workflowId)
+	err := u.service.RunWorkflow(workflowName, userId)
 	if err != nil {
 		fmt.Println("Inside error" + err.Message)
 
@@ -108,7 +109,7 @@ func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
 	} else {
 
 		respondWithJSON(w, 200, responseBody{
-			WorkflowResponse: "workflow:" + workflowId + " is triggered!",
+			WorkflowResponse: "workflow:" + workflowName + " is triggered!",
 		})
 	}
 }
