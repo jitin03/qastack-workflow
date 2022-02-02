@@ -177,6 +177,7 @@ func (s DefaultWorkflowService) ReSubmitRunWorkflow(name string, userId string) 
 	} else {
 		logger.Info("err in run workflow")
 		logger.Info(workflow.Workflow_Run_Name)
+		workflow.Workflow_Run_Name = newWorkflowname
 		return workflow.ToReSubmitRunWorkflowResponseDto(), nil
 	}
 
