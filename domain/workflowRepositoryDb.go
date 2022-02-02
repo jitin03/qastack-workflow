@@ -24,9 +24,9 @@ func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.A
 	log.Info(workflow.Config)
 
 	var id string
-	sqlInsert := "INSERT INTO public.workflows (workflowname, project_id,created_by,config,created_date,workflow_status) values ($1, $2, $3,$4,$5,$6) RETURNING id"
+	sqlInsert := "INSERT INTO public.workflows (workflowname,workflow_run_name ,project_id,created_by,config,created_date,workflow_status) values ($1, $2, $3,$4,$5,$6,$7) RETURNING id"
 
-	err := w.client.QueryRow(sqlInsert, workflow.Name, workflow.Project_Id, workflow.Created_By, workflow.Config, workflow.CreatedDate, workflow.WorkflowStatus).Scan(&id)
+	err := w.client.QueryRow(sqlInsert, workflow.Name, workflow.Workflow_Run_Name, workflow.Project_Id, workflow.Created_By, workflow.Config, workflow.CreatedDate, workflow.WorkflowStatus).Scan(&id)
 
 	// in case of error Rollback, and changes from both the tables will be reverted
 	if err != nil {
@@ -134,7 +134,7 @@ func (d WorkflowRepositoryDb) AllWorkflows(projectKey string, pageId int) ([]Wor
 	var err error
 	workflows := make([]Workflow, 0)
 	logrus.Info(projectKey)
-	findAllSql := "select workflow_status,id,workflowname, project_id,u.username from public.workflows w join public.users u on u.users_id= w.created_by where project_id=$1 LIMIT $2"
+	findAllSql := "select workflow_status,id,workflowname, project_id,u.username,workflow_run_name from public.workflows w join public.users u on u.users_id= w.created_by where project_id=$1 LIMIT $2"
 	err = d.client.Select(&workflows, findAllSql, projectKey, pageId)
 
 	if err != nil {
@@ -146,25 +146,25 @@ func (d WorkflowRepositoryDb) AllWorkflows(projectKey string, pageId int) ([]Wor
 
 }
 
-func (w WorkflowRepositoryDb) UpdateReSubmitedWorkflowRun(oldWorkflowName string, newWorkflowName string, status string, lastExecutedDate string, triggeredBy string) *errs.AppError {
+func (w WorkflowRepositoryDb) UpdateReSubmitedWorkflowRun(oldWorkflowName string, newWorkflowName string, status string, lastExecutedDate string, triggeredBy string) (*Workflow, *errs.AppError) {
 	var err error
 	var workflow Workflow
 	logrus.Info(oldWorkflowName)
-	findAllSql := "select id,workflowname,config from public.workflows where workflowname=$1"
+	findAllSql := "select id,workflowname,config from public.workflows where workflow_run_name=$1"
 	err = w.client.Get(&workflow, findAllSql, oldWorkflowName)
 
 	if err != nil {
 		fmt.Println("Error while querying workflow table table " + err.Error())
-		return errs.NewUnexpectedError("Unexpected database error")
+		return nil, errs.NewUnexpectedError("Unexpected database error")
 	}
 
 	tx, err := w.client.Begin()
 	if err != nil {
 		logger.Error("Error while starting a new transaction for test status transaction: " + err.Error())
-		return errs.NewUnexpectedError("Unexpected database error")
+		return nil, errs.NewUnexpectedError("Unexpected database error")
 	}
 
-	sqlInsert := "insert into workflow_runs (workflow_id,name,status,last_executed_date,executed_by) values ((select id from workflows where workflowname=$1),$2,$3,$4,$5) RETURNING id"
+	sqlInsert := "insert into workflow_runs (workflow_id,name,status,last_executed_date,executed_by) values ((select id from workflows where workflow_run_name=$1),$2,$3,$4,$5) RETURNING id"
 
 	_, err = tx.Exec(sqlInsert, oldWorkflowName, newWorkflowName, status, lastExecutedDate, triggeredBy)
 
@@ -172,16 +172,16 @@ func (w WorkflowRepositoryDb) UpdateReSubmitedWorkflowRun(oldWorkflowName string
 	if err != nil {
 		tx.Rollback()
 		logger.Error("Error while saving transaction into test_status_records: " + err.Error())
-		return errs.NewUnexpectedError("Unexpected database error")
+		return nil, errs.NewUnexpectedError("Unexpected database error")
 	}
-	update_workflow_status := "UPDATE workflows SET workflow_status = (select status from public.workflow_runs wr where name =$1 order by last_executed_date desc limit 1  ) WHERE id=$2"
+	update_workflow_status := "UPDATE workflows SET workflow_status = (select status from public.workflow_runs wr where name =$1 order by last_executed_date desc limit 1  ), workflow_run_name =(select name from public.workflow_runs wr where name =$1 order by last_executed_date desc limit 1  ) WHERE id=$2"
 	_, err = tx.Exec(update_workflow_status, newWorkflowName, workflow.Workflow_Id)
 
 	// in case of error Rollback, and changes from both the tables will be reverted
 	if err != nil {
 		tx.Rollback()
 		logger.Error("Error while saving transaction into workflows table: " + err.Error())
-		return errs.NewUnexpectedError("Unexpected database error")
+		return nil, errs.NewUnexpectedError("Unexpected database error")
 	}
 
 	// commit the transaction when all is good
@@ -189,10 +189,32 @@ func (w WorkflowRepositoryDb) UpdateReSubmitedWorkflowRun(oldWorkflowName string
 	if err != nil {
 		tx.Rollback()
 		logger.Error("Error while commiting transaction for workflows: " + err.Error())
-		return errs.NewUnexpectedError("Unexpected database error")
+		return nil, errs.NewUnexpectedError("Unexpected database error")
 	}
 
-	return nil
+	findWorkflowSql := "select id,workflow_run_name,config from public.workflows where workflowname =$1"
+	err = w.client.Get(&workflow, findWorkflowSql, oldWorkflowName)
+	if err != nil {
+		fmt.Println("Error while querying workflows table table " + err.Error())
+		return nil, errs.NewUnexpectedError("Unexpected database error")
+	}
+	log.Info("UpdateReSubmitedWorkflowRun", workflow)
+	return &workflow, nil
+}
+
+func (w WorkflowRepositoryDb) GetWorkflowNamefromWorkflowRuns(workflowId string) (*WorkflowRuns, *errs.AppError) {
+	var err error
+	var workflowRuns WorkflowRuns
+
+	findAllSql := "select id,name,status from public.workflow_runs where workflow_id=$1"
+	err = w.client.Get(&workflowRuns, findAllSql, workflowId)
+
+	if err != nil {
+		fmt.Println("Error while querying workflow table table " + err.Error())
+		return nil, errs.NewUnexpectedError("Unexpected database error")
+	}
+
+	return &workflowRuns, nil
 }
 
 func (w WorkflowRepositoryDb) UpdateWorkflowRun(workflowId string, status string, lastExecutedDate string, triggeredBy string) *errs.AppError {
@@ -234,6 +256,43 @@ func (w WorkflowRepositoryDb) UpdateWorkflowRun(workflowId string, status string
 	return nil
 }
 
+func (w WorkflowRepositoryDb) UpdateWorkflowStatus(workflowRuns WorkflowRuns) *errs.AppError {
+	tx, err := w.client.Begin()
+	if err != nil {
+		logger.Error("Error while starting a new transaction for test status transaction: " + err.Error())
+		return errs.NewUnexpectedError("Unexpected database error")
+	}
+
+	sqlInsert := "insert into workflow_runs (workflow_id,name,status,last_executed_date,executed_by) values ($1,$2,$3,$4,$5) RETURNING id"
+
+	_, err = tx.Exec(sqlInsert, workflowRuns.WorkflowId, workflowRuns.WorkflowName, workflowRuns.Status, workflowRuns.LastExecutedDate, workflowRuns.UserId)
+
+	// in case of error Rollback, and changes from both the tables will be reverted
+	if err != nil {
+		tx.Rollback()
+		logger.Error("Error while saving transaction into test_status_records: " + err.Error())
+		return errs.NewUnexpectedError("Unexpected database error")
+	}
+	update_workflow_status := "UPDATE workflows SET workflow_status = (select status from public.workflow_runs wr where workflow_id =$1 order by last_executed_date desc limit 1  ) WHERE id=$2"
+	_, err = tx.Exec(update_workflow_status, workflowRuns.WorkflowId, workflowRuns.WorkflowId)
+
+	// in case of error Rollback, and changes from both the tables will be reverted
+	if err != nil {
+		tx.Rollback()
+		logger.Error("Error while saving transaction into workflows table: " + err.Error())
+		return errs.NewUnexpectedError("Unexpected database error")
+	}
+
+	// commit the transaction when all is good
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		logger.Error("Error while commiting transaction for workflows: " + err.Error())
+		return errs.NewUnexpectedError("Unexpected database error")
+	}
+
+	return nil
+}
 func (d WorkflowRepositoryDb) RunWorkflow(workflowId string, userId string) (string, *errs.AppError) {
 	var err error
 	var testWorkflow string

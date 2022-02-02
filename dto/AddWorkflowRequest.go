@@ -13,3 +13,10 @@ type Parameter struct {
 	Name  string `json:"name",omitempty"`
 	Value string `json:"value",omitempty"`
 }
+
+type UpdateWorkflowStatus struct {
+	WorkflowId   string `json:"id"`
+	Status       string `json:"status"`
+	UserId       string `json:"user_Id"`
+	WorkflowName string `json:"workflow_name"`
+}

@@ -24,7 +24,8 @@ type WorkflowServices interface {
 	AllWorkflows(projectKey string, pageId int) ([]dto.AllWorkflowResponse, *errs.AppError)
 	RunWorkflow(string, userId string) *errs.AppError
 	RetryRunWorkflow(string) *errs.AppError
-	ReSubmitRunWorkflow(string, userId string) *errs.AppError
+	ReSubmitRunWorkflow(name string, userId string) (*dto.ReSubmitRunWorkflowResponse, *errs.AppError)
+	UpdateWorkflowStatus(request dto.UpdateWorkflowStatus) *errs.AppError
 	DeleteWorkflow(id string) *errs.AppError
 	GetWorkflowDetail(string) (*dto.AllWorkflowResponse, *errs.AppError)
 }
@@ -145,7 +146,8 @@ func (s DefaultWorkflowService) RetryRunWorkflow(name string) *errs.AppError {
 	return nil
 }
 
-func (s DefaultWorkflowService) ReSubmitRunWorkflow(name string, userId string) *errs.AppError {
+func (s DefaultWorkflowService) ReSubmitRunWorkflow(name string, userId string) (*dto.ReSubmitRunWorkflowResponse, *errs.AppError) {
+
 	url := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo/" + name + "/resubmit"
 	method := "PUT"
 
@@ -160,18 +162,39 @@ func (s DefaultWorkflowService) ReSubmitRunWorkflow(name string, userId string) 
 	response, Readerr := ioutil.ReadAll(res.Body)
 	if Readerr != nil {
 		log.Info(err)
-		return errs.NewUnexpectedError("Unexpected from cluster")
+		return nil, errs.NewUnexpectedError("Unexpected from cluster")
 	}
 	var resubmitWorkflow dto.ReSubmitResponse
 	json.Unmarshal([]byte(response), &resubmitWorkflow)
-	fmt.Printf("Species: %s, Description: %s", resubmitWorkflow.Metadata.Name)
+	fmt.Printf("New WorkflowName: %s", resubmitWorkflow.Metadata.Name)
 	newWorkflowname := resubmitWorkflow.Metadata.Name
 	status := "Resubmitted"
 	lastExecutedDate := time.Now().Format(dbTSLayout)
 	triggeredBy := userId
-	if err := s.repo.UpdateReSubmitedWorkflowRun(name, newWorkflowname, status, lastExecutedDate, triggeredBy); err != nil {
+	if workflow, err := s.repo.UpdateReSubmitedWorkflowRun(name, newWorkflowname, status, lastExecutedDate, triggeredBy); err != nil {
 		logger.Info("err in run workflow")
-		return errs.NewUnexpectedError("Unexpected from UpdateReSubmitedWorkflowRun")
+		return nil, errs.NewUnexpectedError("Unexpected from UpdateReSubmitedWorkflowRun")
+	} else {
+		logger.Info("err in run workflow")
+		logger.Info(workflow.Workflow_Run_Name)
+		return workflow.ToReSubmitRunWorkflowResponseDto(), nil
+	}
+
+}
+
+func (s DefaultWorkflowService) UpdateWorkflowStatus(req dto.UpdateWorkflowStatus) *errs.AppError {
+
+	w := domain.WorkflowRuns{
+		WorkflowId:       req.WorkflowId,
+		WorkflowName:     req.WorkflowName,
+		LastExecutedDate: time.Now().Format(dbTSLayout),
+		Status:           req.Status,
+		UserId:           req.UserId,
+	}
+
+	if err := s.repo.UpdateWorkflowStatus(w); err != nil {
+		logger.Info("err in run workflow")
+		return errs.NewUnexpectedError("Unexpected from UpdateWorkflowStatus")
 	}
 
 	return nil
@@ -182,12 +205,13 @@ func (s DefaultWorkflowService) AddWorkflow(req dto.AddWorkflowRequest) (*dto.Ad
 
 	c := domain.Workflow{
 
-		Name:           req.Name,
-		Project_Id:     req.Project_id,
-		Created_By:     req.Created_By,
-		Config:         config,
-		CreatedDate:    time.Now().Format(dbTSLayout),
-		WorkflowStatus: "Unexecuted",
+		Name:              req.Name,
+		Project_Id:        req.Project_id,
+		Created_By:        req.Created_By,
+		Config:            config,
+		CreatedDate:       time.Now().Format(dbTSLayout),
+		WorkflowStatus:    "Build Now",
+		Workflow_Run_Name: req.Name,
 	}
 
 	if newComponent, err := s.repo.AddWorkflow(c); err != nil {

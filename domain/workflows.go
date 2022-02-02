@@ -8,14 +8,23 @@ import (
 )
 
 type Workflow struct {
-	Workflow_Id    string         `db:"id"`
-	Name           string         `db:"workflowname"`
-	Project_Id     string         `db:"project_id"`
-	Created_By     int            `db:"created_by"`
-	Username       string         `db:"username"`
-	Config         types.JSONText `db:"config"`
-	CreatedDate    string         `db:"created_date"`
-	WorkflowStatus string         `db:"workflow_status"`
+	Workflow_Id       string         `db:"id"`
+	Name              string         `db:"workflowname"`
+	Workflow_Run_Name string         `db:"workflow_run_name"`
+	Project_Id        string         `db:"project_id"`
+	Created_By        int            `db:"created_by"`
+	Username          string         `db:"username"`
+	Config            types.JSONText `db:"config"`
+	CreatedDate       string         `db:"created_date"`
+	WorkflowStatus    string         `db:"workflow_status"`
+}
+
+type WorkflowRuns struct {
+	WorkflowId       string `db:"workflow_id"`
+	Status           string `db:"status"`
+	UserId           string `db:"executed_by"`
+	WorkflowName     string `db:"name"`
+	LastExecutedDate string `db:"last_executed_date"`
 }
 
 type Config struct {
@@ -49,8 +58,10 @@ type WorkflowRepository interface {
 	AddWorkflow(workflow Workflow) (*Workflow, *errs.AppError)
 	AllWorkflows(projectKey string, pageId int) ([]Workflow, *errs.AppError)
 	RunWorkflow(workflowId string, userId string) (string, *errs.AppError)
+	GetWorkflowNamefromWorkflowRuns(workflowId string) (*WorkflowRuns, *errs.AppError)
 	UpdateWorkflowRun(workflowName string, status string, lastExecutedDate string, triggeredBy string) (string *errs.AppError)
-	UpdateReSubmitedWorkflowRun(workflowName string, newWorkflowname string, status string, lastExecutedDate string, triggeredBy string) (string *errs.AppError)
+	UpdateReSubmitedWorkflowRun(workflowName string, newWorkflowname string, status string, lastExecutedDate string, triggeredBy string) (*Workflow, *errs.AppError)
+	UpdateWorkflowStatus(workflowRuns WorkflowRuns) *errs.AppError
 	DeleteWorkflow(id string) *errs.AppError
 	GetWorkflowDetail(string) (*Workflow, *errs.AppError)
 }
@@ -58,14 +69,19 @@ type WorkflowRepository interface {
 func (w Workflow) ToAddWorkflowResponseDto() *dto.AddWorkflowResponse {
 	return &dto.AddWorkflowResponse{w.Workflow_Id}
 }
+
+func (w Workflow) ToReSubmitRunWorkflowResponseDto() *dto.ReSubmitRunWorkflowResponse {
+	return &dto.ReSubmitRunWorkflowResponse{w.Workflow_Run_Name}
+}
 func (t Workflow) ToDto() dto.AllWorkflowResponse {
 	return dto.AllWorkflowResponse{
-		Workflow_Id:    t.Workflow_Id,
-		Name:           t.Name,
-		Project_Id:     t.Project_Id,
-		Username:       t.Username,
-		Config:         t.Config,
-		WorkflowStatus: t.WorkflowStatus,
+		Workflow_Id:       t.Workflow_Id,
+		Name:              t.Name,
+		Project_Id:        t.Project_Id,
+		Username:          t.Username,
+		Config:            t.Config,
+		WorkflowStatus:    t.WorkflowStatus,
+		Workflow_Run_Name: t.Workflow_Run_Name,
 	}
 }
 
