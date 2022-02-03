@@ -283,10 +283,11 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string, userId string) (str
 
 		}
 
-		for _, entrypath := range c.EntryPath {
-			commands = append(commands, entrypath)
+		commands = append(commands, c.EntryPath)
+		// for _, entrypath := range c.EntryPath {
+		// 	commands = append(commands, entrypath)
 
-		}
+		// }
 
 		// commands := []string{"python"}
 		// dependencies := []string{"Task1"}

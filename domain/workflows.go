@@ -31,10 +31,10 @@ type WorkflowRuns struct {
 }
 
 type Config struct {
-	Name       string   `json:"name"`
-	Git_Token  string   `json:"token"`
-	Branch     string   `json:"branch"`
-	EntryPath  []string `json:"entrypath"`
+	Name       string `json:"name"`
+	Git_Token  string `json:"token"`
+	Branch     string `json:"branch"`
+	EntryPath  string `json:"entrypath"`
 	Parameters []struct {
 		Name  string `json:"name"`
 		Value string `json:"value"`
