@@ -19,14 +19,30 @@ type WorkflowRepositoryDb struct {
 	client *sqlx.DB
 }
 
+func (w WorkflowRepositoryDb) UpdateWorkflowConfig(workflow Workflow, id string) *errs.AppError {
+
+	log.Info("WorkflowStatus", workflow.WorkflowStatus)
+	updateWorkflowSql := "UPDATE workflows SET workflowname = $1 ,workflow_run_name = $2 ,project_id=$3, updated_by=$4,config=$5,workflow_status=$6,updated_date=$7 WHERE id = $8"
+	res, err := w.client.Exec(updateWorkflowSql, workflow.Name, workflow.Workflow_Run_Name, workflow.Project_Id, workflow.Updated_By, workflow.Config, workflow.WorkflowStatus, workflow.UpdatedDate, id)
+	if err != nil {
+		return errs.NewUnexpectedError("Unexpected error from database")
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return errs.NewUnexpectedError("Unexpected error from database")
+	}
+	fmt.Println(count)
+	return nil
+}
+
 func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.AppError) {
 
 	log.Info(workflow.Config)
 
 	var id string
-	sqlInsert := "INSERT INTO public.workflows (workflowname,workflow_run_name ,project_id,created_by,config,created_date,workflow_status) values ($1, $2, $3,$4,$5,$6,$7) RETURNING id"
+	sqlInsert := "INSERT INTO public.workflows (workflowname,workflow_run_name ,project_id,created_by,config,created_date,workflow_status,updated_by,updated_date,last_execution_date) values ($1, $2, $3,$4,$5,$6,$7,$8,$9,$10) RETURNING id"
 
-	err := w.client.QueryRow(sqlInsert, workflow.Name, workflow.Workflow_Run_Name, workflow.Project_Id, workflow.Created_By, workflow.Config, workflow.CreatedDate, workflow.WorkflowStatus).Scan(&id)
+	err := w.client.QueryRow(sqlInsert, workflow.Name, workflow.Workflow_Run_Name, workflow.Project_Id, workflow.Created_By, workflow.Config, workflow.CreatedDate, workflow.WorkflowStatus, workflow.Updated_By, workflow.UpdatedDate, workflow.LastExecutedDate).Scan(&id)
 
 	// in case of error Rollback, and changes from both the tables will be reverted
 	if err != nil {
@@ -36,64 +52,6 @@ func (w WorkflowRepositoryDb) AddWorkflow(workflow Workflow) (*Workflow, *errs.A
 
 	workflow.Workflow_Id = id
 	logrus.Info(id)
-
-	// if err != nil {
-	// 	logger.Error("Error while creating new workflow: " + err.Error())
-	// 	return nil, errs.NewUnexpectedError("Unexpected error from database")
-	// }
-	// workflow.Workflow_Id = id
-
-	// // for index, d := range workflow.Config {
-	// // 	fmt.Println(index, d)
-	// // 	x := d.Name
-	// // 	fmt.Println(x)
-
-	// // 	entrypoint := make([]string, 0)
-	// // 	dependencies := make([]string, 0)
-
-	// // 	entrypoint = append(entrypoint, d.EntryPath...)
-
-	// // 	dependencies = append(dependencies, d.Dependencies...)
-
-	// // 	dependencies_as_string, _ := json.Marshal(dependencies)
-	// // 	entrypoint_as_string, _ := json.Marshal(entrypoint)
-	// // 	fmt.Println(string(dependencies_as_string))
-	// // 	fmt.Println(string(entrypoint_as_string))
-
-	// // 	sqlWorkflowStepInsert := "INSERT INTO workflow_steps (workflow_id,name, repository,branch,token,docker_image,entrypath,dependencies,input_command) values ($1, $2,$3,$4,$5,$6,$7,$8,$9) RETURNING id"
-
-	// // 	_, err := tx.Exec(sqlWorkflowStepInsert, id, d.Name, d.Repository, d.Branch, d.Git_Token, d.DockerImage, entrypoint_as_string, dependencies_as_string, d.Source)
-	// // 	if err != nil {
-	// // 		tx.Rollback()
-	// // 		logger.Error("Error while saving transaction into workflow step: " + err.Error())
-	// // 		return nil, errs.NewUnexpectedError("Unexpected database error")
-	// // 	}
-
-	// // 	for _, p := range d.Parameters {
-
-	// // 		var param_id string
-
-	// // 		// Run a query to get new workflow id
-	// // 		stepParamRow := tx.QueryRow("SELECT id FROM public.workflow_steps WHERE name=$1 and workflow_id = $2", d.Name, id)
-	// // 		err = stepParamRow.Scan(&param_id)
-
-	// // 		if err != nil {
-	// // 			tx.Rollback()
-	// // 			logger.Error("Error while getting workflow id : " + err.Error())
-	// // 			return nil, errs.NewUnexpectedError("Unexpected database error")
-	// // 		}
-
-	// // 		sqlWorkflowStepParamInsert := "INSERT INTO workflow_steps_param (workflow_step_id,name, value) values ($1, $2,$3) RETURNING id"
-
-	// // 		_, err := tx.Exec(sqlWorkflowStepParamInsert, param_id, p.Name, p.Value)
-	// // 		if err != nil {
-	// // 			tx.Rollback()
-	// // 			logger.Error("Error while saving transaction into workflow: " + err.Error())
-	// // 			return nil, errs.NewUnexpectedError("Unexpected database error")
-	// // 		}
-	// 	}
-
-	// }
 
 	return &workflow, nil
 }
@@ -134,7 +92,7 @@ func (d WorkflowRepositoryDb) AllWorkflows(projectKey string, pageId int) ([]Wor
 	var err error
 	workflows := make([]Workflow, 0)
 	logrus.Info(projectKey)
-	findAllSql := "select workflow_status,id,workflowname, project_id,u.username,workflow_run_name from public.workflows w join public.users u on u.users_id= w.created_by where project_id=$1 LIMIT $2"
+	findAllSql := "select workflow_status,id,workflowname, project_id,u.username,workflow_run_name,created_by,updated_by,updated_date,created_date,last_execution_date from public.workflows w join public.users u on u.users_id= w.created_by where project_id=$1 LIMIT $2"
 	err = d.client.Select(&workflows, findAllSql, projectKey, pageId)
 
 	if err != nil {
@@ -266,8 +224,8 @@ func (w WorkflowRepositoryDb) UpdateWorkflowStatus(workflowRuns WorkflowRuns) *e
 		logger.Error("Error while saving transaction into test_status_records: " + err.Error())
 		return errs.NewUnexpectedError("Unexpected database error")
 	}
-	update_workflow_status := "UPDATE workflows SET workflow_status = (select status from public.workflow_runs wr where workflow_id =$1 order by last_executed_date desc limit 1  ) WHERE id=$2"
-	_, err = tx.Exec(update_workflow_status, workflowRuns.WorkflowId, workflowRuns.WorkflowId)
+	update_workflow_status := "UPDATE workflows SET workflow_status = (select status from public.workflow_runs wr where workflow_id =$1 order by last_executed_date desc limit 1  ) , last_execution_date = (select last_executed_date from public.workflow_runs wr where workflow_id =$2 order by last_executed_date desc limit 1) WHERE id=$3"
+	_, err = tx.Exec(update_workflow_status, workflowRuns.WorkflowId, workflowRuns.WorkflowId, workflowRuns.WorkflowId)
 
 	// in case of error Rollback, and changes from both the tables will be reverted
 	if err != nil {

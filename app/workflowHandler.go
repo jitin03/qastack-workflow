@@ -115,13 +115,14 @@ func (u WorkflowHandler) RunWorkflow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u WorkflowHandler) RetryRunWorkflow(w http.ResponseWriter, r *http.Request) {
-	workflowId := r.URL.Query().Get("workflowName")
-
+	workflowName := r.URL.Query().Get("workflowName")
+	workflowId := r.URL.Query().Get("Id")
+	userId := r.URL.Query().Get("userId")
 	fmt.Println(workflowId)
 	type responseBody struct {
 		WorkflowResponse string `json:"workflow_response"`
 	}
-	err := u.service.RetryRunWorkflow(workflowId)
+	err := u.service.RetryRunWorkflow(workflowName, userId, workflowId)
 	if err != nil {
 		fmt.Println("Inside error" + err.Message)
 
@@ -153,6 +154,30 @@ func (u WorkflowHandler) ReSubmitRunWorkflow(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+func (u WorkflowHandler) UpdateWorkflowConfig(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+
+	id := params["id"]
+	type responseBody struct {
+		UpdateWorkflow string `json:"message"`
+	}
+	var request dto.UpdateWorkflowRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		WriteResponse(w, http.StatusBadRequest, err.Error())
+	} else {
+
+		appError := u.service.UpdateWorkflowConfig(request, id)
+		if appError != nil {
+			WriteResponse(w, appError.Code, appError.AsMessage())
+		} else {
+			respondWithJSON(w, 200, responseBody{
+				UpdateWorkflow: "workflow:" + id + " is updated successfully!",
+			})
+		}
+	}
+
+}
 func (u WorkflowHandler) UpdateWorkflowStatus(w http.ResponseWriter, r *http.Request) {
 
 	var request dto.UpdateWorkflowStatus
@@ -181,6 +206,7 @@ func (u WorkflowHandler) UpdateWorkflowStatus(w http.ResponseWriter, r *http.Req
 // https://a973a7c68601640278113fe98be8a89d-49052598.us-east-1.elb.amazonaws.com:2746/api/v1/workflows/argo/jjjj-9549b/log?logOptions.container=main&grep=&logOptions.follow=true
 func (u WorkflowHandler) WorkflowLogs(w http.ResponseWriter, r *http.Request) {
 	workflowName := r.URL.Query().Get("workflowName")
+
 	fmt.Println("hello Event")
 
 	events := make(chan *sse.Event)

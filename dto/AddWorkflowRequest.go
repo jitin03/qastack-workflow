@@ -9,6 +9,13 @@ type AddWorkflowRequest struct {
 	Created_By int            `json:"user_Id"`
 }
 
+type UpdateWorkflowRequest struct {
+	Project_id string         `json:"project_Id"`
+	Name       string         `json:"name"`
+	Config     types.JSONText `json:"config"`
+	Updated_By int            `json:"user_Id"`
+}
+
 type Parameter struct {
 	Name  string `json:"name",omitempty"`
 	Value string `json:"value",omitempty"`

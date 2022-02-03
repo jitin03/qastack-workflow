@@ -13,10 +13,13 @@ type Workflow struct {
 	Workflow_Run_Name string         `db:"workflow_run_name"`
 	Project_Id        string         `db:"project_id"`
 	Created_By        int            `db:"created_by"`
+	Updated_By        int            `db:"updated_by"`
 	Username          string         `db:"username"`
 	Config            types.JSONText `db:"config"`
 	CreatedDate       string         `db:"created_date"`
+	UpdatedDate       string         `db:"updated_date"`
 	WorkflowStatus    string         `db:"workflow_status"`
+	LastExecutedDate  string         `db:"last_execution_date"`
 }
 
 type WorkflowRuns struct {
@@ -56,6 +59,7 @@ type Step_Config struct {
 
 type WorkflowRepository interface {
 	AddWorkflow(workflow Workflow) (*Workflow, *errs.AppError)
+	UpdateWorkflowConfig(workflow Workflow, id string) *errs.AppError
 	AllWorkflows(projectKey string, pageId int) ([]Workflow, *errs.AppError)
 	RunWorkflow(workflowId string, userId string) (string, *errs.AppError)
 	GetWorkflowNamefromWorkflowRuns(workflowId string) (*WorkflowRuns, *errs.AppError)
@@ -82,6 +86,9 @@ func (t Workflow) ToDto() dto.AllWorkflowResponse {
 		Config:            t.Config,
 		WorkflowStatus:    t.WorkflowStatus,
 		Workflow_Run_Name: t.Workflow_Run_Name,
+		UpdatedDate:       t.UpdatedDate,
+		CreatedDate:       t.CreatedDate,
+		LastExecutedDate:  t.LastExecutedDate,
 	}
 }
 

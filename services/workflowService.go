@@ -21,9 +21,10 @@ const dbTSLayout = "2006-01-02 15:04:05"
 
 type WorkflowServices interface {
 	AddWorkflow(request dto.AddWorkflowRequest) (*dto.AddWorkflowResponse, *errs.AppError)
+	UpdateWorkflowConfig(request dto.UpdateWorkflowRequest, id string) *errs.AppError
 	AllWorkflows(projectKey string, pageId int) ([]dto.AllWorkflowResponse, *errs.AppError)
 	RunWorkflow(string, userId string) *errs.AppError
-	RetryRunWorkflow(string) *errs.AppError
+	RetryRunWorkflow(string, userId string, workflowId string) *errs.AppError
 	ReSubmitRunWorkflow(name string, userId string) (*dto.ReSubmitRunWorkflowResponse, *errs.AppError)
 	UpdateWorkflowStatus(request dto.UpdateWorkflowStatus) *errs.AppError
 	DeleteWorkflow(id string) *errs.AppError
@@ -118,30 +119,103 @@ func (s DefaultWorkflowService) RunWorkflow(id string, userId string) *errs.AppE
 
 }
 
-func (s DefaultWorkflowService) RetryRunWorkflow(name string) *errs.AppError {
-	url := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo/" + name + "/retry"
-	method := "PUT"
+func (s DefaultWorkflowService) RetryRunWorkflow(name string, userId string, workflowId string) *errs.AppError {
 
+	deleteUrl := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo/" + name
+	log.Info(deleteUrl)
+	method := "DELETE"
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
+	req, err := http.NewRequest(method, deleteUrl, nil)
 
 	if err != nil {
-		log.Info(err)
+		fmt.Println(err)
 		return errs.NewUnexpectedError("Unexpected from cluster")
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Info(err)
+		fmt.Println(err)
 		return errs.NewUnexpectedError("Unexpected from cluster")
 	}
 	defer res.Body.Close()
 
-	_, Readerr := ioutil.ReadAll(res.Body)
-	if Readerr != nil {
-		log.Info(err)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
 		return errs.NewUnexpectedError("Unexpected from cluster")
 	}
+	if res.StatusCode != 200 {
+		fmt.Println(err)
+		return errs.NewUnexpectedError("Unexpected from cluster")
+	}
+
+	url := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo"
+	postMethod := "POST"
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	template, runNorErr := s.repo.RunWorkflow(workflowId, userId)
+	if runNorErr != nil {
+		logger.Info("err in run workflow")
+
+		return errs.NewUnexpectedError("Unexpected from cluster")
+	}
+
+	r := strings.NewReader(template)
+	client = &http.Client{}
+	req, argoErr := http.NewRequest(postMethod, url, r)
+
+	res, argoErr = client.Do(req)
+	if argoErr != nil {
+		logger.Info("err in run workflow")
+		return errs.NewUnexpectedError("Unexpected from cluster")
+	}
+
+	defer res.Body.Close()
+
+	body, bodyerr := ioutil.ReadAll(res.Body)
+
+	if bodyerr != nil {
+		logger.Info("err in run workflow")
+		return errs.NewUnexpectedError("Unexpected from cluster")
+	}
+	logger.Info("ass")
+	fmt.Println(string(body))
+	if res.StatusCode == 409 {
+		return errs.NewUnexpectedError("Workflow name has already triggered ")
+	} else {
+		status := "Running"
+		lastExecutedDate := time.Now().Format(dbTSLayout)
+		triggeredBy := userId
+		err := s.repo.UpdateWorkflowRun(workflowId, status, lastExecutedDate, triggeredBy)
+		if err != nil {
+			logger.Info("err in run workflow")
+			return errs.NewUnexpectedError("Unexpected from UpdateWorkflowRun")
+		}
+	}
+	// url := "https://" + os.Getenv("ARGO_SERVER_ENDPOINT") + ":2746/api/v1/workflows/argo/" + name + "/retry"
+	// method := "PUT"
+
+	// http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	// client := &http.Client{}
+	// req, err := http.NewRequest(method, url, nil)
+
+	// if err != nil {
+	// 	log.Info(err)
+	// 	return errs.NewUnexpectedError("Unexpected from cluster")
+	// }
+	// res, err := client.Do(req)
+	// if err != nil {
+	// 	log.Info(err)
+	// 	return errs.NewUnexpectedError("Unexpected from cluster")
+	// }
+	// defer res.Body.Close()
+
+	// _, Readerr := ioutil.ReadAll(res.Body)
+	// if Readerr != nil {
+	// 	log.Info(err)
+	// 	return errs.NewUnexpectedError("Unexpected from cluster")
+	// }
 
 	return nil
 }
@@ -209,8 +283,11 @@ func (s DefaultWorkflowService) AddWorkflow(req dto.AddWorkflowRequest) (*dto.Ad
 		Name:              req.Name,
 		Project_Id:        req.Project_id,
 		Created_By:        req.Created_By,
+		Updated_By:        req.Created_By,
 		Config:            config,
 		CreatedDate:       time.Now().Format(dbTSLayout),
+		UpdatedDate:       time.Now().Format(dbTSLayout),
+		LastExecutedDate:  "-",
 		WorkflowStatus:    "Build Now",
 		Workflow_Run_Name: req.Name,
 	}
@@ -221,6 +298,25 @@ func (s DefaultWorkflowService) AddWorkflow(req dto.AddWorkflowRequest) (*dto.Ad
 		return newComponent.ToAddWorkflowResponseDto(), nil
 	}
 
+}
+func (s DefaultWorkflowService) UpdateWorkflowConfig(req dto.UpdateWorkflowRequest, id string) *errs.AppError {
+	config := req.Config
+
+	c := domain.Workflow{
+
+		Name:              req.Name,
+		Project_Id:        req.Project_id,
+		Updated_By:        req.Updated_By,
+		Config:            config,
+		UpdatedDate:       time.Now().Format(dbTSLayout),
+		WorkflowStatus:    "Build Again",
+		Workflow_Run_Name: req.Name,
+	}
+
+	if err := s.repo.UpdateWorkflowConfig(c, id); err != nil {
+		return nil
+	}
+	return nil
 }
 
 func NewWorkflowService(repository domain.WorkflowRepository) DefaultWorkflowService {
