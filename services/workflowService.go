@@ -100,7 +100,7 @@ func (s DefaultWorkflowService) RunWorkflow(id string, userId string) *errs.AppE
 		logger.Info("err in run workflow")
 		return errs.NewUnexpectedError("Unexpected from cluster")
 	}
-	logger.Info("ass")
+
 	fmt.Println(string(body))
 	if res.StatusCode == 409 {
 		return errs.NewUnexpectedError("Workflow name has already triggered ")

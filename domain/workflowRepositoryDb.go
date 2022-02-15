@@ -283,6 +283,7 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string, userId string) (str
 
 		}
 
+		log.Info("c.EntryPath", c.EntryPath)
 		commands = append(commands, c.EntryPath)
 		// for _, entrypath := range c.EntryPath {
 		// 	commands = append(commands, entrypath)
@@ -312,23 +313,51 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string, userId string) (str
 
 		parameters := []Parameters{}
 
-		for _, p := range c.Parameters {
-			parameter := Parameters{
-				Name:  p.Name,
-				Value: p.Value,
+		log.Info(len(c.Parameters))
+
+		if len(c.Parameters) > 0 {
+
+			for _, p := range c.Parameters {
+
+				log.Info(p.Name)
+				log.Info(p.Value)
+				var bk Parameters
+				if p.Name == bk.Name {
+					fmt.Println("It is an empty structure.")
+					parameter1 := Parameters{
+						Name:  "test",
+						Value: "test",
+					}
+					parameters = append(parameters, parameter1)
+				} else {
+					fmt.Println("It is not an empty structure.")
+					parameter := Parameters{
+						Name:  p.Name,
+						Value: p.Value,
+					}
+					parameters = append(parameters, parameter)
+				}
+
 			}
-			parameters = append(parameters, parameter)
+
+			argument = Arguments{
+				Parameters: parameters,
+			}
+		} else {
+			parameter1 := Parameters{
+				Name:  "test",
+				Value: "test",
+			}
+			parameters = append(parameters, parameter1)
+
+			argument = Arguments{
+				Parameters: parameters,
+			}
 		}
 		// parameter1 := Parameters{
 		// 	Name:  "Param1",
 		// 	Value: "ParamValue1",
 		// }
-
-		// parameters = append(parameters, parameter1)
-
-		argument = Arguments{
-			Parameters: parameters,
-		}
 
 		t1 := Tasks{Name: c.Name, Template: "task-template", Arguments: &argument}
 		// t2 := Tasks{Name: "Task2", Template: "task-template", Dependencies: dependencies, Arguments: &argument}
