@@ -4,11 +4,13 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"qastack-workflows/dto"
 	"qastack-workflows/services"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/r3labs/sse"
@@ -241,7 +243,10 @@ func (u WorkflowHandler) WorkflowLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client.SubscribeChan("logs", events)
+	//generate unique id, convert string, udpate the course structs using append
+	rand.Seed(time.Now().UnixNano())
 
+	// log.Info(events)
 	// client.Subscribe("message", func(msg *sse.Event) {
 	// 	// Got some data!
 	// 	// fmt.Println(msg.Data)
@@ -255,6 +260,7 @@ func (u WorkflowHandler) WorkflowLogs(w http.ResponseWriter, r *http.Request) {
 	// client.SubscribeRaw(func(msg *sse.Event) {
 	// 	// Got some data!
 	// 	// fmt.Println(string(msg.Data))
+	// 	fmt.Println(string(msg.ID))
 	// 	// fmt.Printf("data: %v \n\n", string(msg.Data))
 	// })
 	for {
@@ -264,8 +270,9 @@ func (u WorkflowHandler) WorkflowLogs(w http.ResponseWriter, r *http.Request) {
 			return
 		case data := <-events:
 
-			// fmt.Printf("data: %v ", *data)
-			// fmt.Fprintf(w, "data: %v \n\n", data)
+			// fmt.Printf("data: %s ", *data)
+
+			fmt.Fprintf(w, "lastEventId:%s \n\n", strconv.Itoa(rand.Intn(1000000)))
 			fmt.Fprintf(w, "data:%s \n\n", data.Data)
 			flusher.Flush()
 		}
@@ -334,6 +341,9 @@ func (u WorkflowHandler) SubscribeToEvent(w http.ResponseWriter, r *http.Request
 
 			// fmt.Printf("data: %v ", *data)
 			// fmt.Fprintf(w, "data: %v \n\n", data)
+			fmt.Fprintf(w, "data: %s\n", data)
+			fmt.Fprintf(w, "id: %s\n", data.ID)
+			fmt.Fprintf(w, "data: %s\n", data.Data)
 			fmt.Fprintf(w, "data:%s \n\n", data.Data)
 			flusher.Flush()
 		}
