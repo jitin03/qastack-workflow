@@ -339,11 +339,11 @@ func (u WorkflowHandler) SubscribeToEvent(w http.ResponseWriter, r *http.Request
 			return
 		case data := <-events:
 
-			// fmt.Printf("data: %v ", *data)
-			// fmt.Fprintf(w, "data: %v \n\n", data)
-			fmt.Fprintf(w, "data: %s\n", data)
-			fmt.Fprintf(w, "id: %s\n", data.ID)
-			fmt.Fprintf(w, "data: %s\n", data.Data)
+			// // fmt.Printf("data: %v ", *data)
+			// // fmt.Fprintf(w, "data: %v \n\n", data)
+			// fmt.Fprintf(w, "data: %s\n", data)
+			// fmt.Fprintf(w, "id: %s\n", data.ID)
+			// fmt.Fprintf(w, "data: %s\n", data.Data)
 			fmt.Fprintf(w, "data:%s \n\n", data.Data)
 			flusher.Flush()
 		}
