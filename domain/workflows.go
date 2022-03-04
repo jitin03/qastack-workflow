@@ -122,9 +122,10 @@ type Parameters struct {
 	Value string `json:"value",omitempty"`
 }
 type Script struct {
-	Image   string   `json:"image"`
-	Command []string `json:"command"`
-	Source  string   `json:"source"`
+	Image           string   `json:"image"`
+	ImagePullPolicy string   `json:"imagePullPolicy"`
+	Command         []string `json:"command"`
+	Source          string   `json:"source"`
 }
 
 type Templates struct {

@@ -306,9 +306,10 @@ func (d WorkflowRepositoryDb) RunWorkflow(workflowId string, userId string) (str
 
 		log.Info("c.DockerImage", c.DockerImage)
 		script = Script{
-			Image:   c.DockerImage,
-			Command: commands,
-			Source:  source,
+			Image:           c.DockerImage,
+			ImagePullPolicy: "Always",
+			Command:         commands,
+			Source:          source,
 		}
 
 		parameters := []Parameters{}
