@@ -28,16 +28,16 @@ type WorkflowServices interface {
 	ReSubmitRunWorkflow(name string, userId string) (*dto.ReSubmitRunWorkflowResponse, *errs.AppError)
 	UpdateWorkflowStatus(request dto.UpdateWorkflowStatus) *errs.AppError
 	DeleteWorkflow(id string) *errs.AppError
-	GetWorkflowDetail(string) (*dto.AllWorkflowResponse, *errs.AppError)
+	GetWorkflowDetail(id string, projectId string) (*dto.AllWorkflowResponse, *errs.AppError)
 }
 
 type DefaultWorkflowService struct {
 	repo domain.WorkflowRepository
 }
 
-func (s DefaultWorkflowService) GetWorkflowDetail(workflowName string) (*dto.AllWorkflowResponse, *errs.AppError) {
+func (s DefaultWorkflowService) GetWorkflowDetail(id string, projectId string) (*dto.AllWorkflowResponse, *errs.AppError) {
 
-	workflow, err := s.repo.GetWorkflowDetail(workflowName)
+	workflow, err := s.repo.GetWorkflowDetail(id, projectId)
 	if err != nil {
 		return nil, err
 	}
@@ -265,6 +265,7 @@ func (s DefaultWorkflowService) UpdateWorkflowStatus(req dto.UpdateWorkflowStatu
 		LastExecutedDate: time.Now().Format(dbTSLayout),
 		Status:           req.Status,
 		UserId:           req.UserId,
+		NodeStatus:       req.NodeStatus,
 	}
 
 	if err := s.repo.UpdateWorkflowStatus(w); err != nil {

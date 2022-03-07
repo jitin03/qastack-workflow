@@ -10,6 +10,7 @@ type AllWorkflowResponse struct {
 	WorkflowStatus    string         `json:"workflow_status"`
 	Username          string         `json:"username"`
 	Config            types.JSONText `json:",omitempty"`
+	NodeStatus        types.JSONText `json:"node_status"`
 	UpdatedDate       string         `json:"updated_date"`
 	CreatedDate       string         `json:"created_date"`
 	LastExecutedDate  string         `json:"last_execution_date"`

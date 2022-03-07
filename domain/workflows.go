@@ -16,6 +16,7 @@ type Workflow struct {
 	Updated_By        int            `db:"updated_by"`
 	Username          string         `db:"username"`
 	Config            types.JSONText `db:"config"`
+	NodeStatus        types.JSONText `db:"node_status"`
 	CreatedDate       string         `db:"created_date"`
 	UpdatedDate       string         `db:"updated_date"`
 	WorkflowStatus    string         `db:"workflow_status"`
@@ -23,11 +24,12 @@ type Workflow struct {
 }
 
 type WorkflowRuns struct {
-	WorkflowId       string `db:"workflow_id"`
-	Status           string `db:"status"`
-	UserId           string `db:"executed_by"`
-	WorkflowName     string `db:"name"`
-	LastExecutedDate string `db:"last_executed_date"`
+	WorkflowId       string         `db:"workflow_id"`
+	Status           string         `db:"status"`
+	UserId           string         `db:"executed_by"`
+	WorkflowName     string         `db:"name"`
+	LastExecutedDate string         `db:"last_executed_date"`
+	NodeStatus       types.JSONText `db:"node_status"`
 }
 
 type Config struct {
@@ -67,7 +69,7 @@ type WorkflowRepository interface {
 	UpdateReSubmitedWorkflowRun(workflowName string, newWorkflowname string, status string, lastExecutedDate string, triggeredBy string) (*Workflow, *errs.AppError)
 	UpdateWorkflowStatus(workflowRuns WorkflowRuns) *errs.AppError
 	DeleteWorkflow(id string) *errs.AppError
-	GetWorkflowDetail(string) (*Workflow, *errs.AppError)
+	GetWorkflowDetail(id string, projectId string) (*Workflow, *errs.AppError)
 }
 
 func (w Workflow) ToAddWorkflowResponseDto() *dto.AddWorkflowResponse {
@@ -89,6 +91,7 @@ func (t Workflow) ToDto() dto.AllWorkflowResponse {
 		UpdatedDate:       t.UpdatedDate,
 		CreatedDate:       t.CreatedDate,
 		LastExecutedDate:  t.LastExecutedDate,
+		NodeStatus:        t.NodeStatus,
 	}
 }
 

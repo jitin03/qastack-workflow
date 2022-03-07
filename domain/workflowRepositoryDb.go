@@ -72,12 +72,12 @@ func (w WorkflowRepositoryDb) DeleteWorkflow(id string) *errs.AppError {
 	return nil
 }
 
-func (d WorkflowRepositoryDb) GetWorkflowDetail(workflowName string) (*Workflow, *errs.AppError) {
+func (d WorkflowRepositoryDb) GetWorkflowDetail(id string, projectId string) (*Workflow, *errs.AppError) {
 	var err error
 	var workflow Workflow
-	logrus.Info(workflowName)
-	findAllSql := "select id,workflowname,config from public.workflows where workflowname=$1"
-	err = d.client.Get(&workflow, findAllSql, workflowName)
+	logrus.Info(id)
+	findAllSql := "select w.id,w.workflowname,w.config, wr.node_status  from public.workflows w join public.workflow_runs wr  on w.id= wr.workflow_id where w.id=$1 and w.project_id=$2 order by wr.last_executed_date desc limit 1"
+	err = d.client.Get(&workflow, findAllSql, id, projectId)
 
 	if err != nil {
 		fmt.Println("Error while querying workflow table table " + err.Error())
@@ -92,7 +92,7 @@ func (d WorkflowRepositoryDb) AllWorkflows(projectKey string, pageId int) ([]Wor
 	var err error
 	workflows := make([]Workflow, 0)
 	logrus.Info(projectKey)
-	findAllSql := "select workflow_status,id,workflowname, project_id,u.username,workflow_run_name,created_by,updated_by,updated_date,created_date,last_execution_date from public.workflows w join public.users u on u.users_id= w.created_by where project_id=$1 LIMIT $2"
+	findAllSql := "select workflow_status,id,workflowname, project_id,u.username,workflow_run_name,created_by,updated_by,updated_date,created_date,last_execution_date,config from public.workflows w join public.users u on u.users_id= w.created_by where project_id=$1 LIMIT $2"
 	err = d.client.Select(&workflows, findAllSql, projectKey, pageId)
 
 	if err != nil {
@@ -214,9 +214,9 @@ func (w WorkflowRepositoryDb) UpdateWorkflowStatus(workflowRuns WorkflowRuns) *e
 		return errs.NewUnexpectedError("Unexpected database error")
 	}
 
-	sqlInsert := "insert into workflow_runs (workflow_id,name,status,last_executed_date,executed_by) values ($1,$2,$3,$4,$5) RETURNING id"
+	sqlInsert := "insert into workflow_runs (workflow_id,name,status,last_executed_date,executed_by,node_status) values ($1,$2,$3,$4,$5,$6) RETURNING id"
 
-	_, err = tx.Exec(sqlInsert, workflowRuns.WorkflowId, workflowRuns.WorkflowName, workflowRuns.Status, workflowRuns.LastExecutedDate, workflowRuns.UserId)
+	_, err = tx.Exec(sqlInsert, workflowRuns.WorkflowId, workflowRuns.WorkflowName, workflowRuns.Status, workflowRuns.LastExecutedDate, workflowRuns.UserId, workflowRuns.NodeStatus)
 
 	// in case of error Rollback, and changes from both the tables will be reverted
 	if err != nil {

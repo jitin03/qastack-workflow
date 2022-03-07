@@ -22,8 +22,9 @@ type Parameter struct {
 }
 
 type UpdateWorkflowStatus struct {
-	WorkflowId   string `json:"id"`
-	Status       string `json:"status"`
-	UserId       string `json:"user_Id"`
-	WorkflowName string `json:"workflow_name"`
+	WorkflowId   string         `json:"id"`
+	Status       string         `json:"status"`
+	UserId       string         `json:"user_Id"`
+	WorkflowName string         `json:"workflow_name"`
+	NodeStatus   types.JSONText `json:"node_status"`
 }
